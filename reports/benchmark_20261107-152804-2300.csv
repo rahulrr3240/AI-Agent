@@ -4,3 +4,7 @@ run_id,condition,order,incident_id,family,service,novel,true_fix,top_fix,top1_co
 20261107-152804-2300,D_cold,3,INC-103,expired_tls_cert,payments-service,False,renew_certificate,renew_certificate,True,1,True,6,renew_certificate,True,,0,expired_tls_cert,hindsight,openai/gpt-oss-20b,openai/gpt-oss-20b,True,1401,872,
 20261107-152804-2300,D_cold,4,INC-104,slow_query_migration,orders-db,False,add_db_index,add_db_index,True,1,True,6,add_db_index,True,,0,slow_query_migration,hindsight,openai/gpt-oss-20b,openai/gpt-oss-20b,True,1745,1129,
 20261107-152804-2300,D_cold,5,INC-105,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,enable_backoff_circuit_breaker,True,1,True,6,enable_backoff_circuit_breaker,True,,0,payments_rate_limit,hindsight,openai/gpt-oss-20b,openai/gpt-oss-20b,True,1440,689,
+20261107-152804-2300,D_cold,6,INC-106,redis_pool_exhaustion,auth-service,False,increase_pool_size,rollback_deploy_and_increase_pool,False,3,False,30,rollback_deploy_and_increase_pool;restart_service;rollback_deploy,False,,2,redis_pool_exhaustion,hindsight,heuristic (fallback),heuristic (Groq failed),False,0,0,"Groq returned no valid AgentResult after 3 attempts. Last error: invalid JSON: 1 validation error for AgentResult
+ranked_fixes
+  Field required [type=missing, input_value={'likely_cause': 'Redis c... p95 latency >2000ms'}]}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing"
