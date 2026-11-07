@@ -155,9 +155,7 @@ executed for either.
 
 ## Learning curve (measured, not drawn)
 
-A full A/B/C benchmark was run on 2026-11-06, but its artifacts could not be reproduced from the files in this repository, so no numbers from it are reported here.
-
-The latest benchmark on 2026-11-07 is intentionally kept separate because it could not complete. Hindsight DNS failures caused the seeded and learning banks to fall back to local keyword memory, and the Groq organization hit its 200,000-token daily cap at 198,589 used before all conditions finished. That run remains visible in the app under the "Latest run (incomplete)" expander and in `reports/benchmark_latest.json`, but it is not used as the headline benchmark. The benchmark now supports `--tpm` and `--pace`, truncates logs to about 3,000 characters, and records `llm_failed` rows instead of substituting the heuristic when `--no-fallback` is set. Fallback rows stay visible but are excluded from headline metrics; this is especially important in condition A, where the memory-OFF heuristic hardcodes `restart_service` first. A clean A/B/C comparison needs another complete run after the daily quota resets and Hindsight Cloud connectivity is restored.
+Results are produced by `python -m oncall.evaluate`, shown in the app's Learning curve tab and in `reports/benchmark_<run_id>.csv`. This README states no benchmark numbers.
 
 ### Conditions
 
@@ -189,6 +187,10 @@ first; with memory ON it recalls four past certificate expiries and ranks
 `renew_certificate` first (`worked 4/4`). Both runs in the audit were answered by
 the deterministic analyst because of Groq rate limits, so this demonstrates the
 memory pipeline, not LLM reasoning.
+
+### Path to adoption
+
+Today: Alertmanager/Grafana webhook ingestion in `webhook.py`, post-mortem import through the same retain path as `scripts/seed_memory.py`, and human-in-the-loop Worked / Failed / Partial write-back. Not built yet: Slack hand-off and PagerDuty integration. This is a practical, operator-first loop for incident response, not a finished SaaS rollout. No customers, pricing, or adoption claims are made here.
 
 ## Quickstart
 

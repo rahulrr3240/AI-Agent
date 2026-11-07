@@ -719,67 +719,157 @@ with tab_live:
 with tab_learning:
     st.subheader("Learning curve — measured, not drawn")
     st.caption(
-        "Each eval incident is run three ways: memory OFF, memory ON with the seeded history, "
-        "and memory ON where each simulated resolution is written back to memory. "
-        "The benchmark is run by `python -m oncall.evaluate`; the data is simulated."
+        "Results are produced by `python -m oncall.evaluate`; they are shown in this "
+        "Learning curve tab and in `reports/benchmark_<run_id>.csv`. This README states "
+        "no benchmark numbers."
     )
     reports = settings.reports_dir
-    st.warning(
-        "**The full A/B/C benchmark could not be completed.** One attempt hit the Groq "
-        "organization's daily token quota, and a separate run lost Hindsight Cloud "
-        "connectivity (DNS failure), so its seeded and learning banks fell back to local "
-        "keyword memory. No memory-effect claim is made from either run.\n\n"
-        "**The evidence for memory is Compare mode on the Live incident tab**, where the "
-        "same alert is investigated with memory OFF and with it ON against the same bank."
-    )
-
+    json_path = reports / "benchmark_latest.json"
     csv_path = reports / "benchmark_latest.csv"
+    run_csv_path = csv_path
+    meta: dict[str, Any] = {}
+    if json_path.exists():
+        try:
+            meta = json.loads(json_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            meta = {}
+        run_id = str(meta.get("run_id") or "")
+        if run_id:
+            candidate = reports / f"benchmark_{run_id}.csv"
+            if candidate.exists():
+                run_csv_path = candidate
 
-    if not csv_path.exists():
+    if not run_csv_path.exists():
+        st.warning(
+            "**The full A/B/C benchmark could not be completed.** No benchmark CSV was found "
+            "in the reports directory, so there are no validated numbers to compare."
+        )
         st.info("No benchmark run yet. Run:\n\n"
                 "```\npython -m oncall.evaluate --reset\n```")
     else:
-        frame = pd.read_csv(csv_path)
-        required = {"condition", "top1_correct", "attempts_to_resolve", "simulated_minutes"}
+        frame = pd.read_csv(run_csv_path)
+        required = {"condition", "top1_correct", "attempts_to_resolve",
+                    "simulated_minutes", "llm_answered"}
         if not required <= set(frame.columns):
             st.error("Benchmark CSV is missing expected columns.")
         else:
-            with st.expander("Latest run (incomplete)"):
-                answered = (frame[frame["llm_answered"].fillna(False).astype(bool)]
-                            if "llm_answered" in frame.columns else frame)
-                summary = (answered.groupby("condition")
-                           .agg(llm_answered=("incident_id", "count"),
-                                top1_accuracy=("top1_correct", "mean"),
-                                avg_attempts=("attempts_to_resolve", "mean"),
-                                avg_minutes=("simulated_minutes", "mean"))
-                           .reset_index())
-                totals = frame.groupby("condition")["incident_id"].count()
-                summary["total_rows"] = summary["condition"].map(totals).fillna(0).astype(int)
-                summary["condition"] = summary["condition"].map(
-                    lambda c: CONDITION_LABELS.get(c, c))
-                summary["answered_of_total"] = summary.apply(
-                    lambda row: f"{row['llm_answered']} / {row['total_rows']}", axis=1)
+            status = str(meta.get("status") or "incomplete")
+            run_id = str(meta.get("run_id") or run_csv_path.stem.replace("benchmark_", ""))
+            st.write(f"Run ID: {run_id}")
+            st.write(f"Status: {status}")
+
+            rows: list[dict[str, Any]] = []
+            for condition in sorted(frame["condition"].dropna().unique()):
+                sub = frame[frame["condition"] == condition].copy()
+                answered = sub[sub["llm_answered"].fillna(False).astype(bool)].copy()
+                rows.append({
+                    "condition": condition,
+                    "condition_label": CONDITION_LABELS.get(condition, condition),
+                    "total_rows": int(len(sub)),
+                    "llm_answered_rows": int(len(answered)),
+                    "top1": float(answered["top1_correct"].mean()) if not answered.empty else None,
+                    "resolved": float(answered["resolved"].mean()) if not answered.empty else None,
+                    "avg_attempts": float(answered["attempts_to_resolve"].mean()) if not answered.empty else None,
+                    "avg_minutes": float(answered["simulated_minutes"].mean()) if not answered.empty else None,
+                    "llm_failed_rows": int((sub["llm_backend"] == "llm_failed").sum())
+                    if "llm_backend" in sub.columns else 0,
+                })
+            summary = pd.DataFrame(rows)
+
+            if summary.empty:
+                st.warning(
+                    "**The full A/B/C benchmark could not be completed.** The benchmark file "
+                    "contains no rows to compare."
+                )
+            else:
                 display = summary.copy()
-                display["top1_accuracy"] = (display["top1_accuracy"] * 100).round(1)
-                display["avg_attempts"] = display["avg_attempts"].round(2)
-                display["avg_minutes"] = display["avg_minutes"].round(1)
+                display["LLM answered / total"] = display.apply(
+                    lambda row: f"{int(row['llm_answered_rows'])} / {int(row['total_rows'])}", axis=1)
+                display["Top-1"] = display.apply(
+                    lambda row: (f"{row['top1'] * 100:.1f}% (n={int(row['llm_answered_rows'])})"
+                                 if row["top1"] is not None else "n/a"), axis=1)
+                display["Resolved"] = display.apply(
+                    lambda row: (f"{row['resolved'] * 100:.1f}% (n={int(row['llm_answered_rows'])})"
+                                 if row["resolved"] is not None else "n/a"), axis=1)
+                display["Avg attempts"] = display.apply(
+                    lambda row: (f"{row['avg_attempts']:.2f} (n={int(row['llm_answered_rows'])})"
+                                 if row["avg_attempts"] is not None else "n/a"), axis=1)
+                display["Avg simulated minutes"] = display.apply(
+                    lambda row: (f"{row['avg_minutes']:.1f} (n={int(row['llm_answered_rows'])})"
+                                 if row["avg_minutes"] is not None else "n/a"), axis=1)
+                display["LLM failed rows"] = display["llm_failed_rows"].astype(int)
+
                 st.dataframe(
                     display.rename(columns={
-                        "condition": "Condition", "answered_of_total": "LLM answered / rows",
-                        "top1_accuracy": "Top-1 accuracy (%)", "avg_attempts": "Avg attempts",
-                        "avg_minutes": "Avg simulated minutes",
-                    })[["Condition", "LLM answered / rows", "Top-1 accuracy (%)",
-                       "Avg attempts", "Avg simulated minutes"]],
+                        "condition_label": "Condition",
+                        "LLM answered / total": "LLM answered / total",
+                        "Top-1": "Top-1",
+                        "Resolved": "Resolved",
+                        "Avg attempts": "Avg attempts",
+                        "Avg simulated minutes": "Avg simulated minutes",
+                        "LLM failed rows": "LLM failed rows",
+                    })[["Condition", "LLM answered / total", "Top-1", "Resolved",
+                       "Avg attempts", "Avg simulated minutes", "LLM failed rows"]],
                     hide_index=True, use_container_width=True,
                 )
+
+                compared = summary[summary["llm_answered_rows"] > 0].copy()
+                if compared.empty:
+                    st.caption("too few LLM-answered rows to compare conditions; no improvement is shown by this run.")
+                else:
+                    if (compared["llm_answered_rows"] < 10).any():
+                        st.caption("too few LLM-answered rows to compare conditions; no improvement is shown by this run.")
+                    else:
+                        text_bits = []
+                        for _, row in compared.sort_values("top1", ascending=False).iterrows():
+                            label = row["condition_label"]
+                            top1 = row["top1"]
+                            if top1 is None:
+                                continue
+                            text_bits.append(f"{label}: top-1 {top1 * 100:.1f}% (n={int(row['llm_answered_rows'])})")
+                        if text_bits:
+                            st.caption(
+                                "Compared conditions show: " + ", ".join(text_bits)
+                                + ". This is a neutral summary of the table above; no improvement "
+                                "claim is made beyond the values shown."
+                            )
+
+                chart_path = reports / "learning_curve.png"
+                plotted = summary[summary["llm_answered_rows"] > 0].copy()
+                if chart_path.exists() and not plotted.empty and (plotted["llm_answered_rows"] >= 1).all():
+                    st.image(str(chart_path), use_container_width=True)
+
                 for column in ("llm_backend", "memory_backend"):
                     if column in frame.columns:
                         values = sorted(frame[column].dropna().unique())
                         st.caption(f"{column.replace('_', ' ').title()}: {', '.join(map(str, values))}")
+
+                st.subheader("Cold start: does it improve as outcomes are recorded?")
+                d_rows = frame[(frame["condition"] == "D_cold") &
+                               (frame["llm_answered"].fillna(False).astype(bool))].sort_values("order")
+                if d_rows.empty:
+                    st.warning(
+                        "**The full A/B/C benchmark could not be completed.** No D-condition rows "
+                        "were answered by the model, so there is no cold-start learning signal to compare yet."
+                    )
+                else:
+                    d_rows = d_rows.copy()
+                    d_rows["cumulative_top1"] = (
+                        d_rows["top1_correct"].cumsum() /
+                        pd.Series(range(1, len(d_rows) + 1), index=d_rows.index)
+                    ) * 100
+                    st.line_chart(d_rows.set_index("order")["cumulative_top1"])
+                    st.caption(
+                        "Cumulative top-1 accuracy for condition D using only LLM-answered rows."
+                    )
+
                 if "llm_backend" in frame.columns and frame["llm_backend"].str.contains(
                         "heuristic", case=False, na=False).any():
-                    st.warning("This run used the deterministic fallback because no Groq key was "
-                               "configured. Numbers measure the pipeline and memory, not the LLM.")
+                    st.warning(
+                        "This run used the deterministic fallback because no Groq key was "
+                        "configured. Numbers measure the pipeline and memory, not the LLM."
+                    )
+
                 with st.expander("Per-incident results"):
                     st.dataframe(frame, hide_index=True, use_container_width=True)
 
