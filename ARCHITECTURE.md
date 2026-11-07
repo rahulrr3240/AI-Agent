@@ -134,7 +134,7 @@ wanted.
 
 ## Benchmark design
 
-`python -m oncall.evaluate` runs the same 20 eval incidents in three conditions,
+`python -m oncall.evaluate` runs the same 20 eval incidents in four conditions,
 each on a **fresh bank** (`oncall-eval-<run>-<condition>`), never the demo bank:
 
 - **A `A_off`** — memory disabled; recall is never called.
@@ -142,6 +142,18 @@ each on a **fresh bank** (`oncall-eval-<run>-<condition>`), never the demo bank:
   back.
 - **C `C_learning`** — seeded, and after every incident the simulated engineer's
   attempted fixes (failed ones included) are retained as outcomes.
+- **D `D_cold`** — a freshly created **empty** bank: nothing is seeded, and the
+  same outcome write-back runs after every incident. D separates learning from
+  seeded knowledge: the only memories available are ones this run created.
+
+The benchmark is resumable because the free tier does not survive a full run in
+one sitting. Each finished row is appended to `reports/benchmark_<run_id>.csv`
+immediately; `--conditions A,B,D` runs a subset, and `--resume <run_id>` continues
+a run, skipping incidents already recorded for that condition. Summary and chart
+are recomputed from every row in the run's CSV, so several partial invocations
+combine into one run, and a run with missing rows is marked `"status":
+"incomplete"` in the JSON and in the chart title. A condition with no LLM-answered
+rows is named in the chart title rather than drawn as an empty line.
 
 `simulator.SimulatedEngineer` walks the agent's ranked fixes until the hidden
 `true_fix` is reached: wrong fixes fail, cost 8 simulated minutes, and are

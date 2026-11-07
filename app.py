@@ -275,10 +275,17 @@ def render_result(investigation: Investigation, key_prefix: str,
     if not investigation.memory_enabled:
         st.info("**Memory is OFF.** No history was consulted — this is the control run.")
 
+    if investigation.used_deterministic_fallback:
+        engine = chip("Deterministic analyst (LLM unavailable)",
+                      "rgba(239,68,68,0.20)", "#b91c1c")
+    else:
+        engine = chip(f"LLM · {investigation.llm_model}",
+                      "rgba(34,197,94,0.18)", "#15803d")
     st.markdown(
         f"{confidence_chip(result.confidence)}"
         f"{chip('memory ON' if investigation.memory_enabled else 'memory OFF')}"
-        f"{chip(investigation.memory_backend)}",
+        f"{chip(investigation.memory_backend)}"
+        f"{engine}",
         unsafe_allow_html=True,
     )
     st.markdown(f'<div class="oc-cause"><b>Likely cause.</b> {result.likely_cause}</div>',

@@ -159,6 +159,29 @@ A full A/B/C benchmark was run on 2026-11-06, but its artifacts could not be rep
 
 The latest benchmark on 2026-11-07 is intentionally kept separate because it could not complete. Hindsight DNS failures caused the seeded and learning banks to fall back to local keyword memory, and the Groq organization hit its 200,000-token daily cap at 198,589 used before all conditions finished. That run remains visible in the app under the "Latest run (incomplete)" expander and in `reports/benchmark_latest.json`, but it is not used as the headline benchmark. The benchmark now supports `--tpm` and `--pace`, truncates logs to about 3,000 characters, and records `llm_failed` rows instead of substituting the heuristic when `--no-fallback` is set. Fallback rows stay visible but are excluded from headline metrics; this is especially important in condition A, where the memory-OFF heuristic hardcodes `restart_service` first. A clean A/B/C comparison needs another complete run after the daily quota resets and Hindsight Cloud connectivity is restored.
 
+### Conditions
+
+- **A · memory OFF** — the pipeline without recall; the control.
+- **B · seeded** — recall over the 28 resolved history incidents.
+- **C · seeded + learning** — seeded, and each simulated resolution is written
+  back so later incidents can recall it.
+- **D · cold start** — memory ON with a **fresh empty bank**: nothing is seeded,
+  and after every incident the simulated engineer's outcomes are written back. D
+  measures learning from this run alone, with no seeded knowledge.
+
+A condition with no LLM-answered rows is named in the chart title instead of being
+plotted.
+
+### Resuming a run
+
+A full four-condition run does not fit into one free-tier day, so the benchmark is
+resumable: every row is written to `reports/benchmark_<run_id>.csv` as soon as that
+incident finishes, `--conditions A,B,D` runs a subset, and `--resume <run_id>`
+continues a run, skipping incidents already recorded for each condition. The
+summary and chart are recomputed from every row in the run's CSV, and a run that
+is missing rows is marked `"status": "incomplete"` in the JSON and in the chart
+title.
+
 ### Memory evidence
 
 Compare mode on `INC-103`: with memory OFF the agent ranks `restart_service`
@@ -228,7 +251,9 @@ before exposing it anywhere.
 ### Benchmark
 
 ```bash
-python -m oncall.evaluate                        # full 20 incidents × 3 conditions (real API calls)
+python -m oncall.evaluate                        # full 20 incidents × 4 conditions A/B/C/D (real API calls)
+python -m oncall.evaluate --conditions A,B,D     # run a subset of conditions
+python -m oncall.evaluate --resume <run_id>      # continue a run from its own CSV
 python -m oncall.evaluate --no-fallback          # count only rows the LLM actually answered
 python -m oncall.evaluate --tpm 6500 --pace 3    # pace under the Groq free-tier token limit
 python -m oncall.evaluate --limit 5              # smoke run
@@ -238,7 +263,8 @@ python -m oncall.evaluate --reset --bank oncall-eval-manual
 ```
 
 Outputs: `reports/benchmark_latest.csv`, `reports/benchmark_latest.json`,
-`reports/learning_curve.png`. The demo bank is never used: each condition gets a
+`reports/learning_curve.png`, plus the run's own `reports/benchmark_<run_id>.csv`
+and `.json`. The demo bank is never used: each condition gets a
 fresh `oncall-eval-<run>-<condition>` bank, deleted afterwards unless
 `--keep-bank`.
 

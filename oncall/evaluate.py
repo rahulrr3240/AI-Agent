@@ -1,14 +1,17 @@
-"""Learning-curve benchmark: memory OFF vs seeded memory vs memory with learning.
+"""Learning-curve benchmark: memory OFF vs seeded vs learning vs cold start.
 
-Three conditions, each on a fresh throwaway bank (never the demo bank):
+Four conditions, each on a fresh throwaway bank (never the demo bank):
 
   A_off       memory OFF — the same pipeline without recall (control)
   B_seeded    memory ON, the 28 resolved history incidents pre-seeded
   C_learning  memory ON, seeded, and every simulated fix outcome written back
               after each incident, so later incidents can benefit
+  D_cold      memory ON with an EMPTY bank: nothing is seeded, every simulated fix
+              outcome is written back, so the run can only learn from itself
 
 Every number comes from real agent runs plus the simulated engineer; nothing is
-hand-drawn. The CSV, JSON summary and chart land in reports/.
+hand-drawn. Each row is written to the run's CSV as soon as that incident
+finishes, so one run can be spread across several days.
 
   python -m oncall.evaluate
   python -m oncall.evaluate --limit 8          # quick smoke run
@@ -17,6 +20,8 @@ hand-drawn. The CSV, JSON summary and chart land in reports/.
   python -m oncall.evaluate --pace 20          # minimum seconds between runs
   python -m oncall.evaluate --keep-bank        # inspect the banks afterwards
   python -m oncall.evaluate --reset --bank oncall-eval-manual
+  python -m oncall.evaluate --conditions A,B   # subset of A,B,C,D
+  python -m oncall.evaluate --resume <run_id>  # continue a run from its own CSV
 
 With `--no-fallback` a Groq failure is recorded as `llm_failed` and excluded
 from the headline numbers instead of being answered by the deterministic
@@ -31,7 +36,7 @@ import secrets
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pandas as pd
 
@@ -42,15 +47,17 @@ from oncall.memory import MemoryBackend, MemoryUnavailable, build_memory
 from oncall.simulator import SimulatedEngineer
 from oncall.tools import SimulatedWorld
 
-CONDITIONS = ["A_off", "B_seeded", "C_learning"]
+CONDITIONS = ["A_off", "B_seeded", "C_learning", "D_cold"]
 CONDITION_LABELS = {
     "A_off": "A · Memory OFF",
     "B_seeded": "B · Memory ON (seeded)",
     "C_learning": "C · Memory ON + learning",
+    "D_cold": "D · Memory ON (cold start)",
 }
-CONDITION_COLORS = {"A_off": "#9ca3af", "B_seeded": "#3b82f6", "C_learning": "#16a34a"}
-CONDITION_STYLES = {"A_off": "-", "B_seeded": "--", "C_learning": "-"}
-CONDITION_MARKERS = {"A_off": "o", "B_seeded": "s", "C_learning": "o"}
+CONDITION_COLORS = {"A_off": "#9ca3af", "B_seeded": "#3b82f6", "C_learning": "#16a34a",
+                    "D_cold": "#f59e0b"}
+CONDITION_STYLES = {"A_off": "-", "B_seeded": "--", "C_learning": "-", "D_cold": ":"}
+CONDITION_MARKERS = {"A_off": "o", "B_seeded": "s", "C_learning": "o", "D_cold": "^"}
 
 
 class Pacer:
@@ -106,9 +113,46 @@ def _seed(memory: MemoryBackend, world: SimulatedWorld, label: str) -> None:
     print(f"    [{label}] seed complete in {time.perf_counter() - started:.1f}s", flush=True)
 
 
+ROW_COLUMNS = [
+    "run_id", "condition", "order", "incident_id", "family", "service", "novel",
+    "true_fix", "top_fix", "top1_correct", "attempts_to_resolve", "resolved",
+    "simulated_minutes", "tried", "no_relevant_history", "no_history_flag_correct",
+    "memories_used", "detected_pattern", "memory_backend", "llm_backend", "llm_model",
+    "llm_answered", "prompt_tokens", "completion_tokens", "fallback_reason",
+]
+
+
+def _run_csv_path(reports_dir: Path, run_id: str) -> Path:
+    return reports_dir / f"benchmark_{run_id}.csv"
+
+
+def _run_json_path(reports_dir: Path, run_id: str) -> Path:
+    return reports_dir / f"benchmark_{run_id}.json"
+
+
+def _append_row(path: Path, row: dict[str, Any]) -> None:
+    """Persist one finished row immediately, so an interrupted run is resumable."""
+    frame = pd.DataFrame([row]).reindex(columns=ROW_COLUMNS)
+    fresh = not (path.exists() and path.stat().st_size > 0)
+    frame.to_csv(path, mode="a", header=fresh, index=False)
+
+
+def read_run_rows(path: Path) -> pd.DataFrame:
+    """Every row recorded for a run so far (empty frame when there is none yet)."""
+    if not path.exists() or path.stat().st_size == 0:
+        return pd.DataFrame(columns=ROW_COLUMNS)
+    frame = pd.read_csv(path).reindex(columns=ROW_COLUMNS)
+    for column in ("llm_answered", "top1_correct", "resolved", "novel"):
+        frame[column] = (frame[column].astype(str).str.lower()
+                         .isin(("true", "1")).astype(bool))
+    return frame
+
+
 def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
                   run_id: str, incidents: list[dict], agent_factory=None,
-                  pacer: Pacer | None = None, no_fallback: bool = False
+                  pacer: Pacer | None = None, no_fallback: bool = False,
+                  done_ids: set[str] | None = None,
+                  on_row: Callable[[dict[str, Any]], None] | None = None
                   ) -> tuple[list[dict[str, Any]], MemoryBackend, str | None]:
     bank = _condition_settings(settings, run_id, condition)
     memory, warning = build_memory(settings, bank_id=bank)
@@ -125,7 +169,17 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         allow_fallback=not no_fallback)))(memory)
     rows: list[dict[str, Any]] = []
     last_tokens = 3000          # used to keep pacing honest when a call fails
+
+    def emit(row: dict[str, Any]) -> None:
+        rows.append(row)
+        if on_row is not None:
+            on_row(row)
+
     for order, raw in enumerate(incidents, start=1):
+        if done_ids and raw["id"] in done_ids:
+            print(f"    {order:02d}/{len(incidents)} {raw['id']}: already recorded — skipped",
+                  flush=True)
+            continue
         memory_on = condition != "A_off"
         if pacer:
             pacer.wait(last_tokens)
@@ -134,7 +188,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         except LLMError as exc:
             # --no-fallback: this row is not an LLM answer, so it is recorded as
             # failed and kept out of the headline numbers.
-            rows.append({
+            emit({
                 "run_id": run_id, "condition": condition, "order": order,
                 "incident_id": raw["id"], "family": raw["family"], "service": raw["service"],
                 "novel": bool(raw.get("novel", False)), "true_fix": raw["true_fix"],
@@ -152,7 +206,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
 
         resolution = SimulatedEngineer().resolve(raw, investigation.result.ranked_fixes)
 
-        if condition == "C_learning":
+        if condition in ("C_learning", "D_cold"):
             for attempt in resolution.attempts:
                 record_outcome(memory, raw, attempt.fix, attempt.outcome, attempt.note)
 
@@ -166,7 +220,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         reserved = (investigation.llm_prompt_tokens + REASONING_MAX_TOKENS
                     if answered and investigation.llm_prompt_tokens else last_tokens)
         last_tokens = reserved
-        rows.append({
+        emit({
             "run_id": run_id,
             "condition": condition,
             "order": order,
@@ -249,17 +303,27 @@ def summarise(frame: pd.DataFrame) -> dict[str, Any]:
     return summary
 
 
-def make_chart(frame: pd.DataFrame, path: Path) -> None:
+def make_chart(frame: pd.DataFrame, path: Path, *, incomplete: bool = False) -> None:
+    """Cumulative top-1 per condition, LLM-answered rows only.
+
+    A condition without LLM-answered rows is not drawn (an empty or single-point
+    line would read as a result); it is named in the title instead.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    total = int(frame["incident_id"].nunique()) if "incident_id" in frame.columns else 0
     if "llm_answered" in frame.columns:
         frame = frame[frame["llm_answered"].astype(bool)]
+
+    plotted: list[str] = []
+    without_rows: list[str] = []
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.8), dpi=170)
     for condition in CONDITIONS:
         sub = frame[frame["condition"] == condition].sort_values("order")
         if sub.empty:
+            without_rows.append(CONDITION_LABELS[condition])
             continue
         label = CONDITION_LABELS[condition]
         color = CONDITION_COLORS[condition]
@@ -274,19 +338,36 @@ def make_chart(frame: pd.DataFrame, path: Path) -> None:
         axes[1].plot(sub["order"], sub["attempts_to_resolve"].expanding().mean(),
                      marker=marker, linewidth=2.2, linestyle=style, markersize=5,
                      color=color, label=label)
+        plotted.append(label)
 
-    axes[0].set_title("Cumulative top-1 accuracy", fontsize=12, fontweight="bold")
-    axes[0].set_ylabel("% incidents where the first-ranked fix was correct")
-    axes[0].set_ylim(0, 105)
-    axes[1].set_title("Attempts to resolve", fontsize=12, fontweight="bold")
-    axes[1].set_ylabel("attempts (dots) · cumulative average (line)")
-    for axis in axes:
-        axis.set_xlabel("eval incident number")
-        axis.grid(alpha=0.25, linewidth=0.7)
-        axis.legend(frameon=False, fontsize=9)
-    fig.suptitle("OnCall Memory — measured on 20 simulated eval incidents "
-                 "(3 conditions, fresh memory banks, LLM-answered rows only)",
-                 fontsize=13, fontweight="bold")
+    notes: list[str] = []
+    if incomplete:
+        notes.append("INCOMPLETE RUN")
+    if without_rows:
+        notes.append("no LLM-answered rows: " + ", ".join(without_rows))
+    if len(plotted) == 1:
+        notes.append("only one condition had LLM-answered rows")
+    suffix = (" · " + " · ".join(notes)) if notes else ""
+
+    if plotted:
+        axes[0].set_title("Cumulative top-1 accuracy", fontsize=12, fontweight="bold")
+        axes[0].set_ylabel("% incidents where the first-ranked fix was correct")
+        axes[0].set_ylim(0, 105)
+        axes[1].set_title("Attempts to resolve", fontsize=12, fontweight="bold")
+        axes[1].set_ylabel("attempts (dots) · cumulative average (line)")
+        for axis in axes:
+            axis.set_xlabel("eval incident number")
+            axis.grid(alpha=0.25, linewidth=0.7)
+            axis.legend(frameon=False, fontsize=9)
+    else:
+        for axis in axes:
+            axis.axis("off")
+            axis.text(0.5, 0.5, "No LLM-answered rows\nin this run",
+                      ha="center", va="center", fontsize=13, transform=axis.transAxes)
+
+    fig.suptitle(f"OnCall Memory — measured on {total} simulated eval incidents "
+                 f"(fresh memory banks, LLM-answered rows only){suffix}",
+                 fontsize=11 if notes else 13, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(path, bbox_inches="tight")
     print(f"Wrote {path}", flush=True)
@@ -297,10 +378,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--limit", type=int, default=0, help="only the first N eval incidents")
-    parser.add_argument("--conditions", default="A,B,C", help="subset of A,B,C")
+    parser.add_argument("--conditions", default="A,B,C,D", help="subset of A,B,C,D")
     parser.add_argument("--bank", default=None, help="base bank id (default: unique per run)")
+    parser.add_argument("--resume", default=None, metavar="RUN_ID",
+                        help="continue an existing run from reports/benchmark_<run_id>.csv, "
+                             "skipping incidents already recorded for each condition")
     parser.add_argument("--reset", action="store_true",
-                        help="delete the three banks before running (use with --bank)")
+                        help="delete the selected banks before running (use with --bank)")
     parser.add_argument("--keep-bank", action="store_true",
                         help="keep the throwaway banks (default: delete after the run)")
     parser.add_argument("--chart-only", action="store_true",
@@ -321,29 +405,68 @@ def main(argv: list[str] | None = None) -> int:
     settings = load_settings()
     if args.chart_only:
         csv_path = settings.reports_dir / "benchmark_latest.csv"
+        json_path = settings.reports_dir / "benchmark_latest.json"
         chart_path = settings.reports_dir / "learning_curve.png"
-        make_chart(pd.read_csv(csv_path), chart_path)
+        status = ""
+        if json_path.exists():
+            try:
+                status = str(json.loads(json_path.read_text(encoding="utf-8"))
+                             .get("status", ""))
+            except (json.JSONDecodeError, OSError):
+                status = ""
+        make_chart(pd.read_csv(csv_path), chart_path, incomplete=status == "incomplete")
         print(f"Redrew {chart_path} from {csv_path}")
         return 0
     world = SimulatedWorld(settings.data_dir)
-    incidents = world.evals(include_truth=True)
-    if args.limit:
-        incidents = incidents[:args.limit]
+    all_incidents = world.evals(include_truth=True)
 
     selected = [c.strip().upper() for c in args.conditions.split(",") if c.strip()]
     wanted = []
     for token in selected:
         matches = [c for c in CONDITIONS if c.startswith(token)]
         if not matches:
-            parser.error(f"unknown condition {token!r}; use A, B or C")
+            parser.error(f"unknown condition {token!r}; use A, B, C or D")
         wanted.append(matches[0])
     wanted = [c for c in CONDITIONS if c in wanted]
 
-    run_id = args.bank or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{secrets.token_hex(2)}"
+    run_id = (args.resume or args.bank
+              or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{secrets.token_hex(2)}")
     if run_id == settings.hindsight_bank_id:
         parser.error("refusing to run the benchmark against the demo bank")
     if args.no_fallback and not settings.has_groq:
         parser.error("--no-fallback needs a GROQ_API_KEY: without it every row would be llm_failed")
+
+    run_csv = _run_csv_path(settings.reports_dir, run_id)
+    run_json = _run_json_path(settings.reports_dir, run_id)
+    prior = read_run_rows(run_csv)
+    prior_meta: dict[str, Any] = {}
+    if args.resume:
+        if prior.empty and not run_json.exists():
+            parser.error(f"nothing to resume for run {run_id!r}: {run_csv.name} is missing")
+        if run_json.exists():
+            try:
+                prior_meta = json.loads(run_json.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                prior_meta = {}
+
+    # On resume the incident set comes from the run's own record, so a later
+    # invocation cannot silently shrink or reorder the run.
+    recorded_ids = [str(i) for i in (prior_meta.get("incident_ids") or [])]
+    if args.resume and recorded_ids:
+        by_id = {raw["id"]: raw for raw in all_incidents}
+        absent = [i for i in recorded_ids if i not in by_id]
+        if absent:
+            parser.error(f"resume would lose incidents missing from data/: {absent[:5]}")
+        incidents = [by_id[i] for i in recorded_ids]
+    else:
+        incidents = all_incidents[:args.limit] if args.limit else all_incidents
+    incident_ids = [raw["id"] for raw in incidents]
+
+    done: dict[str, set[str]] = {
+        condition: (set(prior.loc[prior["condition"] == condition, "incident_id"])
+                    if not prior.empty else set())
+        for condition in wanted
+    }
 
     pacer = Pacer(tpm=args.tpm, minimum_seconds=args.pace)
     print(f"Benchmark run {run_id}")
@@ -354,10 +477,15 @@ def main(argv: list[str] | None = None) -> int:
           f"| fallback: {'disabled (llm_failed rows)' if args.no_fallback else 'enabled'}")
 
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
-    all_rows: list[dict[str, Any]] = []
     backends: dict[str, Any] = {}
     warnings: dict[str, str | None] = {}
     started = time.perf_counter()
+
+    if not prior.empty:
+        print(f"Resuming {run_id}: {len(prior)} row(s) already recorded")
+
+    def sink(row: dict[str, Any]) -> None:
+        _append_row(run_csv, row)
 
     for condition in wanted:
         bank = _condition_settings(settings, run_id, condition)
@@ -370,28 +498,48 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  reset skipped for {bank}: {exc}")
         began = time.perf_counter()
         rows, memory, warning = run_condition(settings, world, condition, run_id, incidents,
-                                              pacer=pacer, no_fallback=args.no_fallback)
-        all_rows.extend(rows)
+                                              pacer=pacer, no_fallback=args.no_fallback,
+                                              done_ids=done.get(condition, set()),
+                                              on_row=sink)
         backends[condition] = memory.name
         warnings[condition] = warning
-        print(f"  {condition} finished in {time.perf_counter() - began:.1f}s", flush=True)
+        print(f"  {condition} finished in {time.perf_counter() - began:.1f}s "
+              f"({len(rows)} new row(s))", flush=True)
 
-    frame = pd.DataFrame(all_rows)
+    # Summary and chart always come from every row in the run's own CSV, so a
+    # run split across several invocations is still one run.
+    frame = read_run_rows(run_csv)
     summary = summarise(frame)
+    present = set(frame["condition"]) if not frame.empty else set()
+    intended = [c for c in CONDITIONS if c in present or c in wanted]
+    missing_rows = {
+        condition: [i for i in incident_ids
+                    if i not in set(frame.loc[frame["condition"] == condition, "incident_id"])]
+        for condition in intended
+    }
+    missing_rows = {c: ids for c, ids in missing_rows.items() if ids}
+    complete = bool(intended) and not missing_rows
+
     payload = {
         "run_id": run_id,
+        "status": "complete" if complete else "incomplete",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "incidents": len(incidents),
-        "conditions": wanted,
+        "incidents": len(incident_ids),
+        "incident_ids": incident_ids,
+        "conditions": intended,
+        "conditions_this_invocation": wanted,
+        "missing_rows": missing_rows,
+        "rows_already_recorded": int(len(prior)),
         "hindsight_configured": settings.has_hindsight,
         "groq_configured": settings.has_groq,
         "models": {"primary": settings.groq_model, "fallback": settings.groq_fallback_model},
         "memory_backends": backends,
-        "memory_warnings": warnings,
+        "memory_warnings": {c: warnings.get(c) for c in wanted if warnings.get(c)},
         "method": {
             "headline_basis": "top-1/resolved/attempts/minutes are computed on rows the LLM "
                               "answered; heuristic-fallback and llm_failed rows are counted "
                               "and excluded",
+            "resumable": True,
             "no_fallback": bool(args.no_fallback),
             "tokens_per_minute_budget": int(args.tpm),
             "minimum_pace_seconds": float(args.pace),
@@ -406,16 +554,15 @@ def main(argv: list[str] | None = None) -> int:
     csv_path = settings.reports_dir / "benchmark_latest.csv"
     json_path = settings.reports_dir / "benchmark_latest.json"
     frame.to_csv(csv_path, index=False)
-    json_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    if args.bank:
-        frame.to_csv(settings.reports_dir / f"benchmark_{run_id}.csv", index=False)
-        (settings.reports_dir / f"benchmark_{run_id}.json").write_text(
-            json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    body = json.dumps(payload, indent=2) + "\n"
+    json_path.write_text(body, encoding="utf-8")
+    run_json.write_text(body, encoding="utf-8")
 
     chart_path = settings.reports_dir / "learning_curve.png"
-    make_chart(frame, chart_path)
+    make_chart(frame, chart_path, incomplete=not complete)
 
-    print("\nSummary (headline = rows the LLM answered)")
+    print(f"\nRun {run_id}: {payload['status'].upper()}"
+          + (f" — missing rows in {', '.join(sorted(missing_rows))}" if missing_rows else ""))
     for condition, stats in summary.items():
         def pct(value: Any) -> str:
             return "n/a" if value is None else f"{value:.0%}"
