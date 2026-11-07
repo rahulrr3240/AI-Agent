@@ -1,0 +1,24 @@
+{
+  "answers": {
+    "INC-101": "rollback_deploy_and_increase_pool",
+    "INC-102": "rollback_deploy",
+    "INC-103": "renew_certificate",
+    "INC-104": "add_db_index",
+    "INC-105": "enable_backoff_circuit_breaker",
+    "INC-106": "increase_pool_size",
+    "INC-107": "rollback_deploy",
+    "INC-108": "renew_certificate",
+    "INC-109": "add_db_index",
+    "INC-110": "enable_backoff_circuit_breaker",
+    "INC-111": "rollback_deploy_and_increase_pool",
+    "INC-112": "rollback_deploy",
+    "INC-113": "add_db_index",
+    "INC-114": "enable_backoff_circuit_breaker",
+    "INC-115": "renew_certificate",
+    "INC-116": "rollback_deploy_and_increase_pool",
+    "INC-117": "rollback_deploy",
+    "INC-119": "scale_up",
+    "INC-120": "rollback_secret_rotation",
+    "INC-121": "scale_up"
+  }
+}

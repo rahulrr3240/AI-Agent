@@ -68,8 +68,37 @@ def extract_json(text: str) -> str:
     return cleaned[start:end + 1]
 
 
-def _schema_hint(schema: type[BaseModel]) -> str:
-    return json.dumps(schema.model_json_schema(), indent=2)[:4000]
+def schema_hint(schema: type[BaseModel]) -> str:
+    """A compact field/type/enum skeleton.
+
+    The full `model_json_schema()` is ~5k characters of `$defs` and JSON-Schema
+    keywords; on a free-tier token budget that is most of the request. This
+    renders the same contract in a few hundred characters.
+    """
+    js = schema.model_json_schema()
+    defs = js.get("$defs", {})
+
+    def render(node: dict[str, Any], depth: int = 0) -> str:
+        node = dict(node)
+        seen = 0
+        while "$ref" in node and seen < 5:
+            node = dict(defs.get(node["$ref"].split("/")[-1], {}))
+            seen += 1
+        if "anyOf" in node:
+            parts = [render(x, depth) for x in node["anyOf"]]
+            return "|".join(p for p in parts if p)
+        if node.get("type") == "array":
+            return f"[{render(node.get('items', {}), depth + 1)}]"
+        if node.get("type") == "object" or "properties" in node:
+            props = ", ".join(
+                f"{key}: {render(value, depth + 1)}"
+                for key, value in node.get("properties", {}).items())
+            return "{" + props + "}"
+        if "enum" in node:
+            return "|".join(f'"{value}"' for value in node["enum"])
+        return str(node.get("type", "any"))
+
+    return render(js)
 
 
 class GroqLLM:
@@ -181,7 +210,7 @@ class GroqLLM:
                         "Your previous response was invalid: " + str(last_error)[:600] + "\n"
                         "Return ONLY one valid JSON object that matches this JSON Schema. "
                         "No prose, no markdown fences, no reasoning tags.\n"
-                        + _schema_hint(schema)
+                        + schema_hint(schema)
                     )},
                 ]
             attempts += 1

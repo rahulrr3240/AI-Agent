@@ -19,7 +19,8 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 from oncall.config import Settings
-from oncall.llm import GroqLLM, LLMError
+from oncall.llm import GroqLLM, LLMError, schema_hint
+from oncall.live import LiveEvidence
 from oncall.memory import (
     MemoryBackend,
     MemoryUnavailable,
@@ -43,6 +44,10 @@ from oncall.schemas import (
 )
 from oncall.tools import SimulatedWorld, detect_pattern, tool_descriptions
 
+# The reasoning call's completion budget. Groq counts `prompt + max_tokens`
+# against its tokens-per-minute limit, so the benchmark paces on this number.
+REASONING_MAX_TOKENS = 1200
+
 SYSTEM_PROMPT = """You are OnCall Memory, an incident-response copilot for a production engineering team.
 
 Rules:
@@ -51,7 +56,7 @@ Rules:
 3. Memory is advisory. Prefer fixes with recorded successes. A fix recorded as FAILED for the same failure pattern must be demoted below fixes that worked, and you must say why.
 4. If a fix worked once and failed later, mention the conflict and lower confidence.
 5. If the recalled memories are not genuinely similar to this incident, set no_relevant_history=true and give a clearly generic best-effort answer with confidence "low". Do not cite any incident IDs in that case.
-6. Only cite incident IDs that appear in the recalled memories. Put the reason each one is similar in why_similar.
+6. Only cite incident IDs that appear in the recalled memories (they look like INC-###, or LIVE-… for incidents resolved from real alerts). Never cite the incident you are investigating. Put the reason each one is similar in why_similar.
 7. ranked_fixes use ONLY ids from the supplied FIX VOCABULARY, ordered best first.
 8. The answer is advisory: no action is executed.
 
@@ -118,10 +123,54 @@ def _error_lines(log_text: str, limit: int = 3) -> list[str]:
     return [line[:200] for line in lines[:limit]]
 
 
+def _minutes_before(reference: datetime, value: str) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return int((reference - parsed).total_seconds() // 60)
+
+
+def _supplied_deploys(deploys: list[dict], as_of: datetime) -> list[dict]:
+    """Deploy records the engineer pasted, annotated with their distance to the alert."""
+    out = []
+    for deploy in deploys:
+        item = dict(deploy)
+        item["minutes_before_alert"] = _minutes_before(as_of, item.get("deployed_at", ""))
+        out.append(item)
+    out.sort(key=lambda d: str(d.get("deployed_at", "")), reverse=True)
+    return out
+
+
+def _deploy_line(deploy: dict) -> str:
+    minutes = deploy.get("minutes_before_alert")
+    timing = f"{minutes}m before alert" if minutes is not None else "deploy time not supplied"
+    return (f"{deploy['service']} {deploy['version']} at {deploy.get('deployed_at') or '?'} "
+            f"({timing})")
+
+
+def _metrics_line(metrics: dict) -> str:
+    summary = metrics.get("summary") or {}
+    parts = []
+    if summary.get("peak_p95_ms") is not None:
+        parts.append(f"peak p95 {summary['peak_p95_ms']}ms")
+    if summary.get("peak_error_rate_pct") is not None:
+        parts.append(f"peak error {summary['peak_error_rate_pct']}%")
+    return ", ".join(parts) or "snapshot loaded without a latency/error summary"
+
+
 class InvestigationAgent:
     def __init__(self, settings: Settings, world: SimulatedWorld | None = None,
                  memory: MemoryBackend | None = None, llm: GroqLLM | None = None,
-                 memory_warning: str | None = None) -> None:
+                 memory_warning: str | None = None,
+                 allow_fallback: bool = True) -> None:
+        """`allow_fallback=False` makes a Groq failure an error instead of quietly
+        answering with the deterministic heuristic. The benchmark uses it so its
+        headline numbers can only contain rows the LLM actually answered."""
         self.settings = settings
         self.world = world or SimulatedWorld(settings.data_dir)
         if memory is None:
@@ -130,11 +179,15 @@ class InvestigationAgent:
         self.memory = memory
         self.memory_warning = memory_warning
         self.llm = llm or GroqLLM(settings)
+        self.allow_fallback = allow_fallback
 
     # ------------------------------------------------------------------ core
     def investigate(self, incident: Incident | EvalIncident | dict,
                     memory_enabled: bool = True,
-                    emit: Callable[[StepEvent], None] | None = None) -> Investigation:
+                    emit: Callable[[StepEvent], None] | None = None,
+                    evidence: LiveEvidence | None = None) -> Investigation:
+        """Run one investigation. `evidence` switches the tools from the simulated
+        world to what an engineer supplied for a live alert."""
         if isinstance(incident, str):
             found = self.world.incident(incident)
             if found is None:
@@ -144,6 +197,113 @@ class InvestigationAgent:
         tracker = StepTracker(emit)
         warning = self.memory_warning
         effective_memory = memory_enabled
+
+        logs, deploys, metrics, log_excerpt = self._collect(inc, evidence, tracker)
+
+        detected, _pattern_score = detect_pattern(
+            f"{inc.alert} {' '.join(inc.symptoms)} {logs.get('text', '')}",
+            self.world.families(),
+        )
+        memories: list[MemoryHit] = []
+        if not memory_enabled:
+            tracker.skip("memory", "Recalling similar incidents", "Memory is OFF — recall skipped (control run)")
+        else:
+            try:
+                memories = tracker.run(
+                    "memory", "Recalling similar incidents",
+                    lambda: self.memory.recall_similar(
+                        alert=inc.alert, service=inc.service, symptoms=inc.symptoms,
+                        logs_excerpt=log_excerpt, k=8, as_of=inc.opened_at,
+                    ),
+                    lambda r: (f"{len(r)} recalled memor{'y' if len(r) == 1 else 'ies'}"
+                               + (" (local keyword fallback)" if self.memory.degraded else "")
+                               + (f"; pattern: {detected}" if detected else "")),
+                )
+                if detected:
+                    # Precision gate: a remembered incident from a different
+                    # failure family is not evidence, however similar it sounds.
+                    memories = [m for m in memories if m.metadata.get("family") == detected]
+                    tracker.steps[-1].detail += f" — {len(memories)} in same pattern family"
+                    if emit:
+                        emit(tracker.steps[-1])
+            except MemoryUnavailable as exc:
+                warning = f"Hindsight recall failed: {exc}. Continuing with memory OFF behavior."
+                effective_memory = False
+                tracker.add("memory", "Recalling similar incidents", status="error",
+                            detail="Hindsight unavailable — falling back to no-history answer")
+
+        if self.settings.agent_mode == "agentic" and self.llm.configured and effective_memory:
+            result, model, latency, fallback_reason, memories, tokens = self._agentic(
+                inc, logs, deploys, metrics, memories, memory_enabled, tracker
+            )
+        else:
+            result, model, latency, fallback_reason, tokens = self._reason(
+                inc, logs, deploys, metrics, memories, effective_memory, tracker
+            )
+
+        history = fix_history_from_memories(memories) if effective_memory else {}
+        conflicts = conflicting_fixes(history) if effective_memory else []
+        result = self._postprocess(result, memories, history, effective_memory, conflicts)
+        result.similar_incidents = [s for s in result.similar_incidents if s.id != inc.id]
+
+        if evidence is not None:
+            # A live alert must not look better-evidenced than it is.
+            for line in evidence.gaps():
+                if line not in result.evidence:
+                    result.evidence.append(line)
+            if not evidence.has_logs:
+                result.confidence = "low"
+
+        if not logs.get("missing") and logs.get("line_count", 0) == 0:
+            result.evidence.append("Log extract was empty — evidence is limited to metrics and deploys.")
+            result.confidence = "low"
+
+        return Investigation(
+            incident_id=inc.id,
+            memory_enabled=memory_enabled,
+            detected_pattern=detected,
+            result=result,
+            steps=tracker.steps,
+            memories=memories,
+            memory_backend=self.memory.name,
+            memory_warning=warning,
+            llm_model=model,
+            llm_latency_ms=latency,
+            llm_prompt_tokens=tokens["prompt"],
+            llm_completion_tokens=tokens["completion"],
+            used_deterministic_fallback=bool(fallback_reason),
+            fallback_reason=fallback_reason,
+            conflicts=conflicts,
+        )
+
+    # ------------------------------------------------------------ evidence
+    def _collect(self, inc: Incident, evidence: LiveEvidence | None,
+                 tracker: StepTracker) -> tuple[dict, list[dict], dict, str]:
+        """Read logs, deploys and metrics, then return the log excerpt for recall.
+
+        With `evidence` the tools read what the engineer supplied for a real
+        alert; without it they read the simulated world, exactly as before.
+        """
+        if evidence is not None:
+            logs = tracker.run(
+                "logs", "Reading supplied logs",
+                lambda: evidence.log_dict(),
+                lambda r: (f"{r['line_count']} pasted lines, {r['error_lines']} errors"
+                           if not r["missing"] else "no logs were supplied with this alert"),
+            )
+            deploys = tracker.run(
+                "deploys", "Checking supplied deploys",
+                lambda: _supplied_deploys(evidence.deploys, inc.opened_at),
+                lambda r: (f"{len(r)} supplied deploy(s): " + ", ".join(_deploy_line(d) for d in r[:2])
+                           if r else "no deploy history was supplied"),
+            )
+            metrics = tracker.run(
+                "metrics", "Reading supplied metrics",
+                lambda: evidence.metrics_dict(),
+                lambda r: (_metrics_line(r) if r.get("available") else "no metrics were supplied"),
+            )
+            excerpt = " ".join(evidence.logs_text.split())[-900:]
+            return logs, deploys, metrics, excerpt
 
         logs = tracker.run(
             "logs", "Reading logs",
@@ -165,98 +325,44 @@ class InvestigationAgent:
                        f"peak error {r['summary']['peak_error_rate_pct']}%"
                        if r.get("available") else "metrics snapshot unavailable"),
         )
-
-        detected, _pattern_score = detect_pattern(
-            f"{inc.alert} {' '.join(inc.symptoms)} {logs.get('text', '')}",
-            self.world.families(),
-        )
-        memories: list[MemoryHit] = []
-        if not memory_enabled:
-            tracker.skip("memory", "Recalling similar incidents", "Memory is OFF — recall skipped (control run)")
-        else:
-            try:
-                memories = tracker.run(
-                    "memory", "Recalling similar incidents",
-                    lambda: self.memory.recall_similar(
-                        alert=inc.alert, service=inc.service, symptoms=inc.symptoms,
-                        logs_excerpt=self.world.log_excerpt(inc.id), k=8, as_of=inc.opened_at,
-                    ),
-                    lambda r: (f"{len(r)} recalled memor{'y' if len(r) == 1 else 'ies'}"
-                               + (" (local keyword fallback)" if self.memory.degraded else "")
-                               + (f"; pattern: {detected}" if detected else "")),
-                )
-                if detected:
-                    # Precision gate: a remembered incident from a different
-                    # failure family is not evidence, however similar it sounds.
-                    memories = [m for m in memories if m.metadata.get("family") == detected]
-                    tracker.steps[-1].detail += f" — {len(memories)} in same pattern family"
-                    if emit:
-                        emit(tracker.steps[-1])
-            except MemoryUnavailable as exc:
-                warning = f"Hindsight recall failed: {exc}. Continuing with memory OFF behavior."
-                effective_memory = False
-                tracker.add("memory", "Recalling similar incidents", status="error",
-                            detail="Hindsight unavailable — falling back to no-history answer")
-
-        if self.settings.agent_mode == "agentic" and self.llm.configured and effective_memory:
-            result, model, latency, fallback_reason, memories = self._agentic(
-                inc, logs, deploys, metrics, memories, memory_enabled, tracker
-            )
-        else:
-            result, model, latency, fallback_reason = self._reason(
-                inc, logs, deploys, metrics, memories, effective_memory, tracker
-            )
-
-        history = fix_history_from_memories(memories) if effective_memory else {}
-        conflicts = conflicting_fixes(history) if effective_memory else []
-        result = self._postprocess(result, memories, history, effective_memory, conflicts)
-
-        if not logs.get("missing") and logs.get("line_count", 0) == 0:
-            result.evidence.append("Log extract was empty — evidence is limited to metrics and deploys.")
-            result.confidence = "low"
-
-        return Investigation(
-            incident_id=inc.id,
-            memory_enabled=memory_enabled,
-            detected_pattern=detected,
-            result=result,
-            steps=tracker.steps,
-            memories=memories,
-            memory_backend=self.memory.name,
-            memory_warning=warning,
-            llm_model=model,
-            llm_latency_ms=latency,
-            used_deterministic_fallback=bool(fallback_reason),
-            fallback_reason=fallback_reason,
-            conflicts=conflicts,
-        )
+        return logs, deploys, metrics, self.world.log_excerpt(inc.id)
 
     # --------------------------------------------------------------- reasoning
     def _reason(self, inc: Incident, logs: dict, deploys: list[dict], metrics: dict,
                 memories: list[MemoryHit], memory_on: bool,
-                tracker: StepTracker) -> tuple[AgentResult, str, int, str | None]:
+                tracker: StepTracker) -> tuple[AgentResult, str, int, str | None, dict[str, int]]:
         started = time.perf_counter()
         tracker.add("reasoning", "Reasoning over evidence", status="running")
+        no_tokens = {"prompt": 0, "completion": 0}
 
         if not self.llm.configured:
+            if not self.allow_fallback:
+                tracker.add("reasoning", "Reasoning over evidence", status="error",
+                            detail="Groq key not configured; fallback is disabled")
+                raise LLMError("GROQ_API_KEY is not set")
             result = self._heuristic(inc, logs, deploys, metrics, memories, memory_on)
             duration = int((time.perf_counter() - started) * 1000)
             tracker.add("reasoning", "Reasoning over evidence",
                         status="done",
                         detail="Groq key not configured — deterministic heuristic analyst",
                         duration_ms=duration)
-            return result, "heuristic (no GROQ_API_KEY)", duration, "GROQ_API_KEY is not set"
+            return result, "heuristic (no GROQ_API_KEY)", duration, "GROQ_API_KEY is not set", no_tokens
 
         messages = self._build_messages(inc, logs, deploys, metrics, memories, memory_on)
         try:
-            llm_result = self.llm.chat_json(messages, AgentResult, max_tokens=1800)
+            llm_result = self.llm.chat_json(messages, AgentResult,
+                                            max_tokens=REASONING_MAX_TOKENS)
         except LLMError as exc:
+            if not self.allow_fallback:
+                tracker.add("reasoning", "Reasoning over evidence", status="error",
+                            detail="Groq failed after retries; fallback is disabled")
+                raise
             result = self._heuristic(inc, logs, deploys, metrics, memories, memory_on)
             duration = int((time.perf_counter() - started) * 1000)
             tracker.add("reasoning", "Reasoning over evidence", status="done",
                         detail="Groq failed after retries — deterministic heuristic used",
                         duration_ms=duration)
-            return result, "heuristic (Groq failed)", duration, str(exc)
+            return result, "heuristic (Groq failed)", duration, str(exc), no_tokens
 
         duration = int((time.perf_counter() - started) * 1000)
         detail = f"{llm_result.model} · {llm_result.latency_ms}ms · {llm_result.attempts} attempt(s)"
@@ -264,7 +370,8 @@ class InvestigationAgent:
             detail += " · " + "; ".join(llm_result.notes)
         tracker.add("reasoning", "Reasoning over evidence", status="done", detail=detail,
                     duration_ms=duration)
-        return llm_result.data, llm_result.model, llm_result.latency_ms, None
+        return (llm_result.data, llm_result.model, llm_result.latency_ms, None,
+                {"prompt": llm_result.prompt_tokens, "completion": llm_result.completion_tokens})
 
     def _build_messages(self, inc: Incident, logs: dict, deploys: list[dict], metrics: dict,
                         memories: list[MemoryHit], memory_on: bool) -> list[dict[str, str]]:
@@ -299,7 +406,7 @@ class InvestigationAgent:
                 "symptoms": inc.symptoms,
                 "severity": inc.severity,
             },
-            "logs": logs.get("text", "")[-6000:],
+            "logs": logs.get("text", "")[-3000:],
             "recent_deploys": deploys,
             "metrics_summary": metrics.get("summary"),
             "metrics_series": metrics.get("series", [])[-9:],
@@ -310,9 +417,9 @@ class InvestigationAgent:
         }
         user = (
             "Investigate this alert and return the JSON object.\n\n"
-            + json.dumps(context, indent=2)
-            + "\n\nSchema (all fields required):\n"
-            + json.dumps(AgentResult.model_json_schema(), indent=2)[:5000]
+            + json.dumps(context, separators=(",", ":"))
+            + "\n\nSchema (all fields required):\n" + schema_hint(AgentResult)
+            + "\nranked_fixes: 1-5 entries, unique ids taken from FIX VOCABULARY, best first."
         )
         return [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -331,11 +438,7 @@ class InvestigationAgent:
                 f"{first['deployed_at']} ({first['minutes_before_alert']}m before alert)"
             )
         if metrics.get("available"):
-            summary = metrics["summary"]
-            evidence.append(
-                f"Metrics: peak p95 {summary['peak_p95_ms']}ms, "
-                f"peak error rate {summary['peak_error_rate_pct']}%"
-            )
+            evidence.append(f"Metrics: {_metrics_line(metrics)}")
 
         similar: list[SimilarIncident] = []
         seen: set[str] = set()
@@ -496,7 +599,7 @@ class InvestigationAgent:
     def _agentic(self, inc: Incident, logs: dict, deploys: list[dict], metrics: dict,
                  memories: list[MemoryHit], memory_enabled: bool,
                  tracker: StepTracker
-                 ) -> tuple[AgentResult, str, int, str | None, list[MemoryHit]]:
+                 ) -> tuple[AgentResult, str, int, str | None, list[MemoryHit], dict[str, int]]:
         """v2: the model picks tools, capped at 6 calls, always falling back to v1."""
         started = time.perf_counter()
         collected: dict[str, Any] = {}
@@ -557,18 +660,18 @@ class InvestigationAgent:
             if "recall_memory" in collected:
                 used_memories = [MemoryHit.model_validate(m) for m in collected["recall_memory"]]
 
-            result, model, latency, fallback_reason = self._reason(
+            result, model, latency, fallback_reason, tokens = self._reason(
                 inc, logs, deploys, metrics, used_memories, memory_enabled, tracker
             )
-            return result, model, latency, fallback_reason, used_memories
+            return result, model, latency, fallback_reason, used_memories, tokens
         except Exception as exc:  # noqa: BLE001 - any agentic failure falls back
             tracker.add("agentic", "Agentic tool selection", status="error",
                         detail=f"{type(exc).__name__}: {exc}")
-            result, model, latency, fallback_reason = self._reason(
+            result, model, latency, fallback_reason, tokens = self._reason(
                 inc, logs, deploys, metrics, memories, memory_enabled, tracker
             )
             reason = f"agentic mode failed ({exc}); fell back to the deterministic pipeline"
-            return result, model, latency, reason, memories
+            return result, model, latency, reason, memories, tokens
 
 
 # --------------------------------------------------------------------------

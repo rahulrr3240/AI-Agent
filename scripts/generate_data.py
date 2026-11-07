@@ -819,11 +819,17 @@ def main() -> None:
     # ---- validate with pydantic, then write -------------------------------
     history_models = [Incident.model_validate(i).model_dump(mode="json") for i in history]
     eval_models = [EvalIncident.model_validate(i).model_dump(mode="json") for i in eval_incidents]
+    public_eval_models = [
+        {key: value for key, value in item.items() if key != "true_fix"}
+        for item in eval_models
+    ]
+    eval_answers = {item["id"]: item["true_fix"] for item in eval_models}
 
     _write(DATA / "services.json", {"services": SERVICES})
     _write(DATA / "deploys.json", {"deploys": deploys})
     _write(DATA / "incidents_history.json", {"incidents": history_models})
-    _write(DATA / "incidents_eval.json", {"incidents": eval_models})
+    _write(DATA / "incidents_eval.json", {"incidents": public_eval_models})
+    _write(DATA / "incidents_eval_answers.json", {"answers": eval_answers})
     _write(DATA / "families.json", {"families": FAMILIES})
 
     print(f"services:  {len(SERVICES)}")

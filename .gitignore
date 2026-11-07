@@ -4,6 +4,8 @@ __pycache__/
 .env
 .pytest_cache/
 .memory_store/
+.freebuff/
+.live_alerts/
 reports/eval_*.json
 reports/*.log
 .DS_Store

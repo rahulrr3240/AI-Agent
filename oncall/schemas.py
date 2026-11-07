@@ -115,8 +115,11 @@ class SimilarIncident(BaseModel):
     @field_validator("id")
     @classmethod
     def _looks_like_id(cls, v: str) -> str:
-        if not v.strip().upper().startswith("INC-"):
-            raise ValueError(f"similar incident id must look like INC-###: {v!r}")
+        """Shape check only. The real gate is `_postprocess`, which drops any cited
+        id that is not in the recalled memories — so a live incident resolved last
+        week (LIVE-…) can be cited, and an invented one still cannot."""
+        if not v.strip().upper().startswith(("INC-", "LIVE-")):
+            raise ValueError(f"similar incident id must look like INC-### or LIVE-…: {v!r}")
         return v
 
 
@@ -180,6 +183,8 @@ class Investigation(BaseModel):
     memory_warning: str | None = None
     llm_model: str = "none"
     llm_latency_ms: int = 0
+    llm_prompt_tokens: int = 0
+    llm_completion_tokens: int = 0
     used_deterministic_fallback: bool = False
     fallback_reason: str | None = None
     conflicts: list[str] = Field(default_factory=list)

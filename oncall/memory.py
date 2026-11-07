@@ -21,14 +21,16 @@ clearly labelled in the UI and never presented as Hindsight.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import math
+import queue
 import re
 import threading
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import Any, Callable, Iterable, Protocol
 
 from oncall.config import Settings
 from oncall.schemas import (
@@ -38,6 +40,59 @@ from oncall.schemas import (
     MemoryHit,
     OutcomeRecord,
 )
+
+
+class _SdkRunner:
+    """Run every Hindsight SDK call on one thread with one event loop.
+
+    The SDK's sync wrappers do `asyncio.get_event_loop().run_until_complete(...)`.
+    Streamlit executes each script run in a fresh thread, so those calls land on a
+    different loop every time and aiohttp fails with "Timeout context manager
+    should be used inside a task" — which broke outcome writes and memory stats.
+    One owned thread, one owned loop, calls serialized.
+    """
+
+    def __init__(self) -> None:
+        self._jobs: queue.Queue[tuple[Callable[[], Any], dict[str, Any]] | None] = queue.Queue()
+        self._thread = threading.Thread(target=self._body, name="hindsight-sdk", daemon=True)
+        self._thread.start()
+
+    def _body(self) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        while True:
+            job = self._jobs.get()
+            if job is None:
+                break
+            fn, box = job
+            try:
+                box["value"] = fn()
+            except BaseException as exc:  # noqa: BLE001 - re-raised on the caller's thread
+                box["error"] = exc
+            finally:
+                box["done"].set()
+
+    def call(self, fn: Callable[[], Any], timeout: float = 120.0) -> Any:
+        box: dict[str, Any] = {"done": threading.Event(), "value": None, "error": None}
+        self._jobs.put((fn, box))
+        if not box["done"].wait(timeout):
+            raise MemoryUnavailable(f"Hindsight call did not return within {timeout:.0f}s")
+        if box["error"] is not None:
+            raise box["error"]
+        return box["value"]
+
+
+_runner: _SdkRunner | None = None
+_runner_lock = threading.Lock()
+
+
+def _get_runner() -> _SdkRunner:
+    global _runner
+    if _runner is None:
+        with _runner_lock:
+            if _runner is None:
+                _runner = _SdkRunner()
+    return _runner
 
 STOPWORDS = {
     "the", "and", "for", "with", "from", "that", "this", "was", "were", "are", "has",
@@ -175,13 +230,19 @@ class HindsightMemory:
             raise MemoryUnavailable("hindsight-client is not installed") from exc
 
         self.bank_id = bank_id or settings.hindsight_bank_id
-        self._client = client if client is not None else Hindsight(
-            base_url=settings.hindsight_base_url,
-            api_key=settings.hindsight_api_key or None,
-            timeout=settings.hindsight_timeout,
-        )
+        self._timeout = float(settings.hindsight_timeout)
+        self._runner = _get_runner()
+        self._client = client if client is not None else self._runner.call(
+            lambda: Hindsight(
+                base_url=settings.hindsight_base_url,
+                api_key=settings.hindsight_api_key or None,
+                timeout=settings.hindsight_timeout,
+            ))
         self._bank_ready = False
         self._lock = threading.Lock()
+
+    def _call(self, fn: Callable[[], Any]) -> Any:
+        return self._runner.call(fn, timeout=self._timeout + 30)
 
     # -- setup ------------------------------------------------------------
     def ensure_bank(self) -> None:
@@ -191,7 +252,7 @@ class HindsightMemory:
             if self._bank_ready:
                 return
             try:
-                self._client.get_bank_config(self.bank_id)
+                self._call(lambda: self._client.get_bank_config(self.bank_id))
                 self._bank_ready = True
                 return
             except Exception as exc:  # noqa: BLE001 - 404 means "create it"
@@ -199,12 +260,12 @@ class HindsightMemory:
                 if status not in (404, None):
                     raise MemoryUnavailable(f"cannot read bank {self.bank_id!r}: {exc}") from exc
             try:
-                self._client.create_bank(
+                self._call(lambda: self._client.create_bank(
                     bank_id=self.bank_id,
                     name="OnCall Memory",
                     mission=INCIDENT_MISSION,
                     disposition={"skepticism": 4, "literalism": 4, "empathy": 2},
-                )
+                ))
             except Exception as exc:  # noqa: BLE001 - concurrent creation / exists
                 message = str(exc).lower()
                 if "exist" not in message and "409" not in message:
@@ -216,7 +277,7 @@ class HindsightMemory:
         inc = _as_incident(incident)
         self.ensure_bank()
         try:
-            self._client.retain(
+            self._call(lambda: self._client.retain(
                 bank_id=self.bank_id,
                 content=incident_memory_text(inc),
                 context="incident postmortem",
@@ -230,7 +291,7 @@ class HindsightMemory:
                     "outcomes": outcomes_metadata(inc),
                     "source": "oncall-memory",
                 },
-            )
+            ))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"retain failed for {inc.id}: {exc}") from exc
         return f"incident-{inc.id}"
@@ -239,7 +300,7 @@ class HindsightMemory:
         self.ensure_bank()
         document_id = f"outcome-{record.incident_id}-{record.fix}"
         try:
-            self._client.retain(
+            self._call(lambda: self._client.retain(
                 bank_id=self.bank_id,
                 content=outcome_memory_text(record),
                 context="incident fix outcome",
@@ -255,7 +316,7 @@ class HindsightMemory:
                     "outcome": record.outcome,
                     "source": "oncall-memory",
                 },
-            )
+            ))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"retain outcome failed for {record.incident_id}: {exc}") from exc
         return document_id
@@ -271,7 +332,7 @@ class HindsightMemory:
             # observation comes back with metadata=None and no document_id, so
             # it cannot be attributed to an incident or filtered by pattern.
             # Provenance beats consolidation for triage.
-            response = self._client.recall(
+            response = self._call(lambda: self._client.recall(
                 bank_id=self.bank_id,
                 query=query,
                 types=["world", "experience"],
@@ -279,7 +340,7 @@ class HindsightMemory:
                 max_tokens=1400,
                 query_timestamp=(as_of if isinstance(as_of, str) else as_of.isoformat())
                 if as_of else None,
-            )
+            ))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"recall failed: {exc}") from exc
         results = list(getattr(response, "results", []) or [])
@@ -336,12 +397,12 @@ class HindsightMemory:
             f"root causes, and which fixes worked or failed. Cite incident IDs."
         )
         try:
-            response = self._client.reflect(
+            response = self._call(lambda: self._client.reflect(
                 bank_id=self.bank_id,
                 query=query,
                 budget="mid",
                 context="on-call incident history review",
-            )
+            ))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"reflect failed: {exc}") from exc
         return (getattr(response, "text", "") or "").strip()
@@ -349,7 +410,7 @@ class HindsightMemory:
     def stats(self) -> dict[str, Any]:
         self.ensure_bank()
         try:
-            page = self._client.list_memories(bank_id=self.bank_id, limit=1000)
+            page = self._call(lambda: self._client.list_memories(bank_id=self.bank_id, limit=1000))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"stats failed: {exc}") from exc
         items = list(getattr(page, "items", []) or [])
@@ -379,14 +440,14 @@ class HindsightMemory:
 
     def delete_bank(self) -> None:
         try:
-            self._client.delete_bank(self.bank_id)
+            self._call(lambda: self._client.delete_bank(self.bank_id))
         except Exception as exc:  # noqa: BLE001
             raise MemoryUnavailable(f"delete bank failed: {exc}") from exc
         self._bank_ready = False
 
     def close(self) -> None:
         try:
-            self._client.close()
+            self._runner.call(lambda: self._client.close(), timeout=30.0)
         except Exception:  # noqa: BLE001
             pass
 
@@ -669,5 +730,5 @@ def memory_incident_ids(memories: Iterable[MemoryHit]) -> set[str]:
         incident_id = (hit.metadata or {}).get("incident_id")
         if incident_id:
             ids.add(incident_id)
-        ids.update(re.findall(r"INC-\d{3,4}", hit.text))
+        ids.update(re.findall(r"INC-\d{3,4}|LIVE-\d{8}-\d{6}", hit.text))
     return ids

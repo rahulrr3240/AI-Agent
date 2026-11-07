@@ -35,7 +35,7 @@ Differences from the original brief:
 
 ### Finding: consolidated observations lose provenance
 
-Live testing showed that recalled `observation` results come back with
+Live API inspection showed that recalled `observation` results come back with
 `metadata=None` and no `document_id`. Our whole attribution model (incident ID,
 failure family, exact worked/failed counts) relies on the metadata attached at
 retain time. Recall therefore requests `types=["world","experience"]` (raw facts)
@@ -51,9 +51,9 @@ uses scores only to order groups when present. It never invents a score.
 ## Data and evaluation decisions
 
 - **Eval incidents are stored unresolved**: `root_cause=""`, `fixes_tried=[]`,
-  `resolved_by=""`. The brief's schema has those fields, but filling them would
-  leak the answer to anything reading `incidents_eval.json`. `true_fix` stays in
-  the file for the simulator/benchmark only, and the agent never receives it.
+  `resolved_by=""`. Public `incidents_eval.json` has no `true_fix` field. The
+  simulator-only answer map is stored separately in `incidents_eval_answers.json`
+  and is loaded only by the benchmark; the agent never receives it.
 - **20 eval incidents** = 17 recurring patterns, 2 genuinely novel patterns
   (Kafka consumer lag, signing-key rotation), plus **one repeat of the Kafka
   pattern** (`INC-121`). The repeat is marked `novel=false`: it is not in the
@@ -74,7 +74,8 @@ uses scores only to order groups when present. It never invents a score.
 - **Pattern gate.** `tools.detect_pattern` classifies the failure from distinctive
   strings in the alert/symptoms/logs (`data/families.json`). It is runbook-style
   keyword logic over visible evidence — **not** the incident's stored `family`
-  label. It scores 48/48 on the generated incidents (asserted in tests). Recall
+  label. It reproduces the stored family for 48/48 generated incidents, which
+  `python scripts/validate_data.py` checks. Recall
   results from another pattern are dropped so a novel alert can honestly return
   "no relevant history" instead of citing a superficially similar old incident.
 - **Memory guardrail.** After LLM validation, fixes with recorded failures are
@@ -149,7 +150,7 @@ Measured run `20261106-161035-f7f9` (20 incidents × 3 conditions, Hindsight Clo
 - The Hindsight SDK's async transport sometimes prints "Unclosed client session"
   at interpreter shutdown; scripts call `memory.close()` but the SDK can still
   emit it. It does not affect results.
-- `.env` is present locally for live testing and is gitignored. No secret is
+- `.env` is present locally for live runs and is gitignored. No secret is
   committed; `check_connections.py` only ever prints booleans/counts.
 - The initial `check_connections` probe bank is deleted after the round trip.
   If deletion fails (permissions/quota), the script prints its name for manual

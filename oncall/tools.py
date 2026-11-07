@@ -40,8 +40,12 @@ class SimulatedWorld:
     def history(self) -> list[dict]:
         return self._json("incidents_history.json")["incidents"]
 
-    def evals(self) -> list[dict]:
-        return self._json("incidents_eval.json")["incidents"]
+    def evals(self, *, include_truth: bool = False) -> list[dict]:
+        incidents = self._json("incidents_eval.json")["incidents"]
+        if not include_truth:
+            return incidents
+        answers = self._json("incidents_eval_answers.json")["answers"]
+        return [{**incident, "true_fix": answers[incident["id"]]} for incident in incidents]
 
     def deploys(self) -> list[dict]:
         return self._json("deploys.json")["deploys"]

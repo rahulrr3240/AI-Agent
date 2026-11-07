@@ -12,8 +12,16 @@ hand-drawn. The CSV, JSON summary and chart land in reports/.
 
   python -m oncall.evaluate
   python -m oncall.evaluate --limit 8          # quick smoke run
+  python -m oncall.evaluate --no-fallback      # only LLM-answered rows count
+  python -m oncall.evaluate --tpm 6500         # pace under the Groq free-tier TPM limit
+  python -m oncall.evaluate --pace 20          # minimum seconds between runs
   python -m oncall.evaluate --keep-bank        # inspect the banks afterwards
   python -m oncall.evaluate --reset --bank oncall-eval-manual
+
+With `--no-fallback` a Groq failure is recorded as `llm_failed` and excluded
+from the headline numbers instead of being answered by the deterministic
+heuristic. That matters most for condition A: the heuristic always ranks
+`restart_service` first, so a heuristic row in A is not a model answer at all.
 """
 from __future__ import annotations
 
@@ -27,8 +35,9 @@ from typing import Any
 
 import pandas as pd
 
-from oncall.agent import InvestigationAgent, record_outcome
+from oncall.agent import REASONING_MAX_TOKENS, InvestigationAgent, record_outcome
 from oncall.config import Settings, load_settings
+from oncall.llm import LLMError
 from oncall.memory import MemoryBackend, MemoryUnavailable, build_memory
 from oncall.simulator import SimulatedEngineer
 from oncall.tools import SimulatedWorld
@@ -42,6 +51,45 @@ CONDITION_LABELS = {
 CONDITION_COLORS = {"A_off": "#9ca3af", "B_seeded": "#3b82f6", "C_learning": "#16a34a"}
 CONDITION_STYLES = {"A_off": "-", "B_seeded": "--", "C_learning": "-"}
 CONDITION_MARKERS = {"A_off": "o", "B_seeded": "s", "C_learning": "o"}
+
+
+class Pacer:
+    """Sliding-window throttle for the Groq free tier (tokens per minute).
+
+    It sleeps on *measured* usage: after each investigation it knows how many
+    prompt + completion tokens that call really cost, keeps a 60-second window
+    of them, and waits until the window fits under `tpm` again.
+    """
+
+    def __init__(self, tpm: int = 8000, minimum_seconds: float = 2.0) -> None:
+        self.tpm = max(0, int(tpm))
+        self.minimum = max(0.0, float(minimum_seconds))
+        self.events: list[tuple[float, int]] = []
+        self.waited_seconds = 0.0
+        self.waits = 0
+
+    def wait(self, tokens: int) -> None:
+        now = time.monotonic()
+        self.events = [(t, n) for t, n in self.events if now - t < 60.0]
+        reservation = max(0, int(tokens))
+        delay = self.minimum
+        if self.tpm and reservation > self.tpm:
+            delay = max(delay, 60.0)
+        elif self.tpm:
+            used = sum(n for _, n in self.events)
+            drop = 0
+            while used + reservation > self.tpm and drop < len(self.events):
+                used -= self.events[drop][1]
+                delay = max(delay, self.events[drop][0] + 60.0 - now + 0.5)
+                drop += 1
+        if delay > 0:
+            self.waits += 1
+            self.waited_seconds += delay
+            print(f"    pacing: reserving {reservation} tokens against "
+                  f"{sum(n for _, n in self.events)}/{self.tpm} tokens/60s "
+                  f"→ waiting {delay:.1f}s", flush=True)
+            time.sleep(delay)
+        self.events.append((time.monotonic(), reservation))
 
 
 def _condition_settings(settings: Settings, run_id: str, condition: str) -> str:
@@ -59,11 +107,13 @@ def _seed(memory: MemoryBackend, world: SimulatedWorld, label: str) -> None:
 
 
 def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
-                  run_id: str, incidents: list[dict], agent_factory=None
+                  run_id: str, incidents: list[dict], agent_factory=None,
+                  pacer: Pacer | None = None, no_fallback: bool = False
                   ) -> tuple[list[dict[str, Any]], MemoryBackend, str | None]:
     bank = _condition_settings(settings, run_id, condition)
     memory, warning = build_memory(settings, bank_id=bank)
-    print(f"  {condition}: backend={memory.name} bank={bank}", flush=True)
+    print(f"  {condition}: backend={memory.name} bank={bank}"
+          + (" | fallback disabled" if no_fallback else ""), flush=True)
     if warning:
         print(f"    WARNING: {warning}", flush=True)
 
@@ -71,11 +121,35 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         _seed(memory, world, condition)
 
     agent = (agent_factory or (lambda mem: InvestigationAgent(
-        settings, world=world, memory=mem, memory_warning=warning)))(memory)
+        settings, world=world, memory=mem, memory_warning=warning,
+        allow_fallback=not no_fallback)))(memory)
     rows: list[dict[str, Any]] = []
+    last_tokens = 3000          # used to keep pacing honest when a call fails
     for order, raw in enumerate(incidents, start=1):
         memory_on = condition != "A_off"
-        investigation = agent.investigate(raw["id"], memory_enabled=memory_on)
+        if pacer:
+            pacer.wait(last_tokens)
+        try:
+            investigation = agent.investigate(raw["id"], memory_enabled=memory_on)
+        except LLMError as exc:
+            # --no-fallback: this row is not an LLM answer, so it is recorded as
+            # failed and kept out of the headline numbers.
+            rows.append({
+                "run_id": run_id, "condition": condition, "order": order,
+                "incident_id": raw["id"], "family": raw["family"], "service": raw["service"],
+                "novel": bool(raw.get("novel", False)), "true_fix": raw["true_fix"],
+                "top_fix": "", "top1_correct": False, "attempts_to_resolve": 0,
+                "resolved": False, "simulated_minutes": 0, "tried": "",
+                "no_relevant_history": False, "no_history_flag_correct": None,
+                "memories_used": 0, "detected_pattern": "", "memory_backend": memory.name,
+                "llm_backend": "llm_failed", "llm_model": "none", "llm_answered": False,
+                "prompt_tokens": 0, "completion_tokens": 0,
+                "fallback_reason": str(exc)[:300],
+            })
+            print(f"    {order:02d}/{len(incidents)} {raw['id']}: LLM FAILED — row excluded "
+                  f"from headline numbers", flush=True)
+            continue
+
         resolution = SimulatedEngineer().resolve(raw, investigation.result.ranked_fixes)
 
         if condition == "C_learning":
@@ -86,6 +160,12 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         if raw.get("novel") and memory_on:
             flag_correct = bool(investigation.result.no_relevant_history)
 
+        answered = not investigation.used_deterministic_fallback
+        # Groq meters `prompt + max_tokens` against its TPM limit, so pacing uses
+        # the reservation the call made, not just what it ended up generating.
+        reserved = (investigation.llm_prompt_tokens + REASONING_MAX_TOKENS
+                    if answered and investigation.llm_prompt_tokens else last_tokens)
+        last_tokens = reserved
         rows.append({
             "run_id": run_id,
             "condition": condition,
@@ -106,14 +186,19 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
             "memories_used": len(investigation.memories),
             "detected_pattern": investigation.detected_pattern,
             "memory_backend": investigation.memory_backend,
-            "llm_backend": ("heuristic (fallback)" if investigation.used_deterministic_fallback
+            "llm_backend": ("heuristic (fallback)" if not answered
                             else investigation.llm_model),
             "llm_model": investigation.llm_model,
+            "llm_answered": answered,
+            "prompt_tokens": investigation.llm_prompt_tokens,
+            "completion_tokens": investigation.llm_completion_tokens,
             "fallback_reason": investigation.fallback_reason or "",
         })
         print(f"    {order:02d}/{len(incidents)} {raw['id']}: top={resolution.top_fix} "
               f"{'OK' if resolution.top1_correct else 'miss'} · "
-              f"{resolution.attempts_to_resolve} attempt(s) · {resolution.simulated_minutes} min",
+              f"{resolution.attempts_to_resolve} attempt(s) · {resolution.simulated_minutes} min"
+              f" · {last_tokens} tok reserved"
+              + ("" if answered else " · HEURISTIC FALLBACK"),
               flush=True)
 
     try:
@@ -124,25 +209,42 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
 
 
 def summarise(frame: pd.DataFrame) -> dict[str, Any]:
+    """Headline numbers use only rows the LLM actually answered.
+
+    Heuristic-fallback and llm_failed rows stay in the CSV and are counted here,
+    but they never move a headline percentage: the deterministic analyst ranks
+    `restart_service` first whenever memory is off, so counting those rows in
+    condition A would be measuring a strawman.
+    """
     summary: dict[str, Any] = {}
     for condition in CONDITIONS:
         sub = frame[frame["condition"] == condition]
         if sub.empty:
             continue
-        novel = sub[sub["novel"]]
+        answered = sub[sub["llm_answered"].astype(bool)] if "llm_answered" in sub else sub
+        novel = answered[answered["novel"]]
+        has_rows = len(answered) > 0
         summary[condition] = {
             "incidents": int(len(sub)),
-            "top1_accuracy": round(float(sub["top1_correct"].mean()), 4),
-            "resolved_rate": round(float(sub["resolved"].mean()), 4),
-            "avg_attempts": round(float(sub["attempts_to_resolve"].mean()), 3),
-            "avg_simulated_minutes": round(float(sub["simulated_minutes"].mean()), 2),
-            "second_half_top1": round(float(sub.iloc[len(sub) // 2:]["top1_correct"].mean()), 4),
+            "llm_answered": int(len(answered)),
+            "fallback_rows": int(sub["llm_backend"].str.contains("heuristic").sum()),
+            "llm_failed_rows": int((sub["llm_backend"] == "llm_failed").sum()),
+            "headline_basis": ("rows answered by the LLM only"
+                               if len(answered) != len(sub) else "all rows were LLM-answered"),
+            "top1_accuracy": round(float(answered["top1_correct"].mean()), 4) if has_rows else None,
+            "resolved_rate": round(float(answered["resolved"].mean()), 4) if has_rows else None,
+            "avg_attempts": round(float(answered["attempts_to_resolve"].mean()), 3) if has_rows else None,
+            "avg_simulated_minutes": round(float(answered["simulated_minutes"].mean()), 2) if has_rows else None,
+            "second_half_top1": round(float(answered.iloc[len(answered) // 2:]["top1_correct"].mean()), 4)
+            if has_rows else None,
             "novel_incidents": int(len(novel)),
             "novel_flag_accuracy": (
                 round(float(novel["no_history_flag_correct"].dropna().mean()), 4)
                 if not novel.empty else None
             ),
-            "fallback_runs": int(sub["llm_backend"].str.contains("heuristic").sum()),
+            "avg_prompt_tokens": round(float(answered["prompt_tokens"].mean()), 1)
+            if has_rows and "prompt_tokens" in answered else None,
+            "all_rows_top1": round(float(sub["top1_correct"].mean()), 4),
         }
     return summary
 
@@ -152,6 +254,8 @@ def make_chart(frame: pd.DataFrame, path: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    if "llm_answered" in frame.columns:
+        frame = frame[frame["llm_answered"].astype(bool)]
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.8), dpi=170)
     for condition in CONDITIONS:
         sub = frame[frame["condition"] == condition].sort_values("order")
@@ -181,7 +285,8 @@ def make_chart(frame: pd.DataFrame, path: Path) -> None:
         axis.grid(alpha=0.25, linewidth=0.7)
         axis.legend(frameon=False, fontsize=9)
     fig.suptitle("OnCall Memory — measured on 20 simulated eval incidents "
-                 "(3 conditions, fresh memory banks)", fontsize=13, fontweight="bold")
+                 "(3 conditions, fresh memory banks, LLM-answered rows only)",
+                 fontsize=13, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.94))
     fig.savefig(path, bbox_inches="tight")
     print(f"Wrote {path}", flush=True)
@@ -200,6 +305,17 @@ def main(argv: list[str] | None = None) -> int:
                         help="keep the throwaway banks (default: delete after the run)")
     parser.add_argument("--chart-only", action="store_true",
                         help="redraw the chart from the existing CSV (no API calls)")
+    parser.add_argument("--no-fallback", action="store_true",
+                        help="record a row as llm_failed instead of using the deterministic "
+                             "heuristic when Groq fails; those rows are excluded from the "
+                             "headline numbers")
+    parser.add_argument("--tpm", type=int, default=6500,
+                        help="token budget per minute to pace against (Groq free tier caps "
+                             "openai/gpt-oss-120b at 8000 TPM; the default leaves headroom "
+                             "because repair retries and completion output reserve more than "
+                             "they use; 0 disables pacing)")
+    parser.add_argument("--pace", type=float, default=2.0,
+                        help="minimum seconds to wait between investigations")
     args = parser.parse_args(argv)
 
     settings = load_settings()
@@ -210,7 +326,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Redrew {chart_path} from {csv_path}")
         return 0
     world = SimulatedWorld(settings.data_dir)
-    incidents = world.evals()
+    incidents = world.evals(include_truth=True)
     if args.limit:
         incidents = incidents[:args.limit]
 
@@ -226,11 +342,16 @@ def main(argv: list[str] | None = None) -> int:
     run_id = args.bank or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{secrets.token_hex(2)}"
     if run_id == settings.hindsight_bank_id:
         parser.error("refusing to run the benchmark against the demo bank")
+    if args.no_fallback and not settings.has_groq:
+        parser.error("--no-fallback needs a GROQ_API_KEY: without it every row would be llm_failed")
 
+    pacer = Pacer(tpm=args.tpm, minimum_seconds=args.pace)
     print(f"Benchmark run {run_id}")
     print(f"Backend: {'Hindsight' if settings.has_hindsight else 'local keyword fallback'}"
           f" | model: {settings.groq_model if settings.has_groq else 'deterministic heuristic'}")
     print(f"Incidents: {len(incidents)} | conditions: {', '.join(wanted)}")
+    print(f"Pacing: {args.tpm} tokens/minute, at least {args.pace:g}s between investigations "
+          f"| fallback: {'disabled (llm_failed rows)' if args.no_fallback else 'enabled'}")
 
     settings.reports_dir.mkdir(parents=True, exist_ok=True)
     all_rows: list[dict[str, Any]] = []
@@ -248,7 +369,8 @@ def main(argv: list[str] | None = None) -> int:
             except MemoryUnavailable as exc:
                 print(f"  reset skipped for {bank}: {exc}")
         began = time.perf_counter()
-        rows, memory, warning = run_condition(settings, world, condition, run_id, incidents)
+        rows, memory, warning = run_condition(settings, world, condition, run_id, incidents,
+                                              pacer=pacer, no_fallback=args.no_fallback)
         all_rows.extend(rows)
         backends[condition] = memory.name
         warnings[condition] = warning
@@ -266,6 +388,17 @@ def main(argv: list[str] | None = None) -> int:
         "models": {"primary": settings.groq_model, "fallback": settings.groq_fallback_model},
         "memory_backends": backends,
         "memory_warnings": warnings,
+        "method": {
+            "headline_basis": "top-1/resolved/attempts/minutes are computed on rows the LLM "
+                              "answered; heuristic-fallback and llm_failed rows are counted "
+                              "and excluded",
+            "no_fallback": bool(args.no_fallback),
+            "tokens_per_minute_budget": int(args.tpm),
+            "minimum_pace_seconds": float(args.pace),
+            "seconds_spent_pacing": round(pacer.waited_seconds, 1),
+            "pacing_waits": pacer.waits,
+            "prompt_log_chars": 3000,
+        },
         "summary": summary,
         "elapsed_seconds": round(time.perf_counter() - started, 1),
     }
@@ -282,12 +415,24 @@ def main(argv: list[str] | None = None) -> int:
     chart_path = settings.reports_dir / "learning_curve.png"
     make_chart(frame, chart_path)
 
-    print("\nSummary")
+    print("\nSummary (headline = rows the LLM answered)")
     for condition, stats in summary.items():
-        print(f"  {CONDITION_LABELS[condition]}: top-1 {stats['top1_accuracy']:.0%}, "
-              f"avg attempts {stats['avg_attempts']:.2f}, "
-              f"avg {stats['avg_simulated_minutes']:.1f} min, "
-              f"resolved {stats['resolved_rate']:.0%}")
+        def pct(value: Any) -> str:
+            return "n/a" if value is None else f"{value:.0%}"
+
+        def num(value: Any, places: int = 2) -> str:
+            return "n/a" if value is None else f"{value:.{places}f}"
+
+        print(f"  {CONDITION_LABELS[condition]}: top-1 {pct(stats['top1_accuracy'])} "
+              f"of {stats['llm_answered']}/{stats['incidents']} LLM-answered rows · "
+              f"resolved {pct(stats['resolved_rate'])} · attempts "
+              f"{num(stats['avg_attempts'])} · minutes {num(stats['avg_simulated_minutes'], 1)}")
+        if stats["fallback_rows"] or stats["llm_failed_rows"]:
+            print(f"      excluded: {stats['fallback_rows']} heuristic fallback(s), "
+                  f"{stats['llm_failed_rows']} llm_failed · all-rows top-1 would be "
+                  f"{pct(stats['all_rows_top1'])}")
+    print(f"  pacing: {pacer.waits} wait(s), {pacer.waited_seconds:.0f}s of the "
+          f"{payload['elapsed_seconds']:.0f}s run")
     print(f"\nWrote {csv_path}")
     print(f"Wrote {json_path}")
     print(f"Wrote {chart_path}")

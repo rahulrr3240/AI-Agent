@@ -4,14 +4,28 @@ Run: streamlit run app.py
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import streamlit as st
+from pydantic import BaseModel
 
 from oncall.agent import InvestigationAgent, record_outcome
 from oncall.config import load_settings
+from oncall.llm import GroqLLM, LLMError
+from oncall.live import (
+    QUEUE_PATH,
+    enqueue_manual,
+    evidence_from_record,
+    get_record,
+    incident_from_record,
+    load_queue,
+    mark_investigated,
+    parse_webhook,
+)
 from oncall.memory import (
     HindsightMemory,
     LocalMemory,
@@ -28,6 +42,9 @@ CONDITION_LABELS = {
     "B_seeded": "B · Memory ON (seeded history)",
     "C_learning": "C · Memory ON + learning",
 }
+# The incidents DEMO_SCRIPT.md uses. Pre-running them means the recording never
+# stalls on an API call, and compare mode reads the same cache.
+DEMO_INCIDENTS = ["INC-103", "INC-101"]
 
 st.set_page_config(page_title=APP_TITLE, page_icon="🧠", layout="wide")
 
@@ -90,6 +107,77 @@ def get_agent(bank_id: str) -> InvestigationAgent:
                               memory_warning=warning)
 
 
+class _WarmProbe(BaseModel):
+    ok: bool
+
+
+@st.cache_resource(show_spinner="Warming up: one recall + one model call…")
+def warm_up() -> dict[str, Any]:
+    """Prove Hindsight and Groq work before the demo starts, not during it."""
+    settings = get_settings()
+    report: dict[str, Any] = {"memory_ok": False, "memory": "", "llm_ok": False, "llm": ""}
+    try:
+        memory, warning = get_memory(settings.hindsight_bank_id)
+        if memory.name != "hindsight" or warning:
+            report["memory"] = warning or "Hindsight unavailable; local keyword fallback is active"
+        else:
+            hits = memory.recall_similar(
+                alert="checkout-service p95 latency > 2000ms for 5m",
+                service="checkout-service", symptoms=["ConnectionPoolTimeoutError"],
+                logs_excerpt="ConnectionPoolTimeoutError: Timeout waiting for connection from pool",
+                k=1)
+            report["memory_ok"] = True
+            report["memory"] = (f"Hindsight OK — recall returned {len(hits)} memory"
+                                if hits else
+                                "Hindsight reachable but recall returned nothing — seed the bank")
+    except MemoryUnavailable as exc:
+        report["memory"] = f"Hindsight failed: {exc}"
+
+    llm = GroqLLM(settings)
+    if not llm.configured:
+        report["llm"] = "Groq: GROQ_API_KEY is not set — the deterministic analyst will answer"
+    else:
+        try:
+            result = llm.chat_json(
+                [{"role": "system", "content": "Answer only with JSON."},
+                 {"role": "user", "content": 'Return {"ok": true} exactly.'}],
+                _WarmProbe, max_tokens=60)
+            report["llm_ok"] = True
+            report["llm"] = f"Groq OK — {result.model} in {result.latency_ms}ms"
+        except LLMError as exc:
+            report["llm"] = f"Groq failed: {str(exc)[:160]}"
+    return report
+
+
+def prerun_demo_incidents() -> None:
+    """Run the scripted incidents now so the recording never waits on an API call.
+
+    Results land in the same session cache the UI and compare mode read from, so
+    the demo replays instantly afterwards.
+    """
+    progress = st.progress(0.0, text="Pre-running the demo incidents…")
+    total = len(DEMO_INCIDENTS) * 2
+    done = 0
+    failures = []
+    for incident_id in DEMO_INCIDENTS:
+        for memory_on in (False, True):
+            try:
+                run_investigation(incident_id, memory_on)
+            except Exception as exc:  # noqa: BLE001 - report, keep warming the rest
+                failures.append(f"{incident_id} memory {'ON' if memory_on else 'OFF'}: "
+                                f"{type(exc).__name__}: {exc}")
+            done += 1
+            progress.progress(done / total, text=f"Pre-running {incident_id} "
+                                                 f"({'ON' if memory_on else 'OFF'}) — "
+                                                 f"{done}/{total}")
+    progress.empty()
+    if failures:
+        st.error("Some demo runs failed:\n\n" + "\n".join(f"- {f}" for f in failures))
+    else:
+        cached = ", ".join(f"{i} (OFF+ON)" for i in DEMO_INCIDENTS)
+        st.success(f"Cached for the demo: {cached}. Compare mode reuses these runs.")
+
+
 def chip(text: str, bg: str = "rgba(120,120,120,0.16)", fg: str = "inherit") -> str:
     return f'<span class="oc-chip" style="background:{bg};color:{fg}">{text}</span>'
 
@@ -128,6 +216,14 @@ def render_trace(steps: list[StepEvent], placeholder=None) -> None:
         st.markdown(text)
 
 
+def resolve_incident(incident_id: str):
+    """A queued live alert, or a record from the simulated world."""
+    record = get_record(incident_id)
+    if record is not None:
+        return incident_from_record(record)
+    return get_world().incident(incident_id)
+
+
 def run_investigation(incident_id: str, memory_on: bool, live: bool = False) -> Investigation:
     cache: dict = st.session_state.setdefault("investigations", {})
     key = (incident_id, memory_on)
@@ -150,9 +246,18 @@ def run_investigation(incident_id: str, memory_on: bool, live: bool = False) -> 
         if placeholder is not None:
             render_trace(steps, placeholder)
 
+    record = get_record(incident_id)
     with st.spinner("Investigating…" if live else None):
-        investigation = agent.investigate(incident_id, memory_enabled=memory_on, emit=emit)
+        if record is not None:
+            # Real input: same pipeline, evidence from what was supplied.
+            investigation = agent.investigate(incident_from_record(record),
+                                              memory_enabled=memory_on, emit=emit,
+                                              evidence=evidence_from_record(record))
+        else:
+            investigation = agent.investigate(incident_id, memory_enabled=memory_on, emit=emit)
     cache[key] = investigation
+    if record is not None:
+        mark_investigated(incident_id)
     if placeholder is not None:
         render_trace(investigation.steps, placeholder)
     return investigation
@@ -230,8 +335,10 @@ def render_result(investigation: Investigation, key_prefix: str,
 def handle_outcome(incident_id: str, fix: str, outcome: str, note_key: str) -> None:
     settings = get_settings()
     memory, _ = get_memory(settings.hindsight_bank_id)
-    world = get_world()
-    incident = world.incident(incident_id)
+    incident = resolve_incident(incident_id)
+    if incident is None:
+        st.error(f"Cannot record an outcome: unknown incident {incident_id}.")
+        return
     note = st.session_state.get(note_key, "")
     try:
         record, _document = record_outcome(memory, incident, fix, outcome, note)
@@ -300,7 +407,27 @@ if not settings.has_hindsight:
     st.info("To use real memory, set `HINDSIGHT_BASE_URL` and `HINDSIGHT_API_KEY` in `.env`, "
             "then run `python scripts/seed_memory.py --force`.")
 
-tab_demo, tab_learning = st.tabs(["🚨 Live incident", "📈 Learning curve"])
+warm = warm_up()
+if warm["memory_ok"] and warm["llm_ok"]:
+    st.success(f"● Warm-up passed — {warm['memory']} · {warm['llm']}")
+else:
+    st.error(f"● Warm-up FAILED — {warm['memory']} · {warm['llm']}")
+
+with st.expander("Demo prep", expanded=False):
+    st.caption(
+        f"DEMO_SCRIPT.md walks through {', '.join(DEMO_INCIDENTS)}. Pre-run them once before "
+        "you record: each run is cached in this session, so the live trace and the "
+        "OFF-vs-ON comparison replay instantly instead of waiting on the API."
+    )
+    if st.button("Pre-run the scripted demo incidents", use_container_width=True):
+        prerun_demo_incidents()
+    cached = sorted({f"{i} ({'ON' if on else 'OFF'})"
+                     for (i, on) in st.session_state.get("investigations", {})})
+    if cached:
+        st.caption("Cached in this session: " + ", ".join(cached))
+
+tab_demo, tab_live, tab_learning = st.tabs(
+    ["🚨 Live incident", "🔌 Live alert (real input)", "📈 Learning curve"])
 
 with tab_demo:
     left, center, right = st.columns([1.0, 2.15, 1.32], gap="large")
@@ -308,6 +435,14 @@ with tab_demo:
     # ------------------------------------------------------------- left feed
     with left:
         st.subheader("Incident feed")
+        queued_live = load_queue(limit=5)
+        if queued_live:
+            st.markdown("**⚡ Queued live alerts**")
+            for record in queued_live:
+                st.caption(f"`{record['id']}` · {record['service']} · "
+                           f"{record['alert'][:64]}")
+            st.caption("Real input, not fixtures — open the **Live alert** tab to investigate one.")
+            st.divider()
         if st.button("Trigger next incident ▶", use_container_width=True, type="primary"):
             current = incident_ids.index(st.session_state.selected_id)
             st.session_state.selected_id = incident_ids[(current + 1) % len(incident_ids)]
@@ -433,8 +568,144 @@ with tab_demo:
             render_compare(compare_on, f"{compare_id}-on")
 
     st.markdown(
-        '<div class="oc-footer">Simulated data. Advisory only, no actions are executed. '
-        'The agent’s learning is persistent memory — not model retraining.</div>',
+        '<div class="oc-footer">Seeded history and the incident fixtures are simulated; live '
+        'alerts are real input you supplied. Advisory only — no action is executed. The '
+        'agent’s learning is persistent memory — not model retraining.</div>',
+        unsafe_allow_html=True,
+    )
+
+with tab_live:
+    st.subheader("Investigate an alert you actually received")
+    st.caption(
+        "This tab takes real input — service, alert text, a webhook body, your own logs. "
+        "The pipeline is the same one the simulated incidents use: recall from Hindsight, "
+        "reasoning on Groq, and Worked / Failed / Partial written back as memory. Anything "
+        "you do not supply is reported as missing instead of invented."
+    )
+    live_left, live_center = st.columns([1.02, 1.98], gap="large")
+
+    with live_left:
+        st.markdown(f"**Alert queue** · `.{QUEUE_PATH.parent.name}/{QUEUE_PATH.name}`")
+        queued = load_queue(limit=12)
+        if not queued:
+            st.caption("Empty. Queue one below, or POST a real notification:")
+            st.code("python webhook.py\npython scripts/send_alert.py", language="bash")
+        for record in queued:
+            received = record.get("received_at", "")[:16].replace("T", " ")
+            with st.container(border=True):
+                st.markdown(
+                    f"{severity_chip(record.get('severity', 'P2'))}"
+                    f"{chip(record['service'])}"
+                    f"{chip(record['family'])}",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(f"**{record['alert'][:150]}**")
+                st.caption(f"`{record['id']}` · {received} UTC · from {record['source']} · "
+                           f"{'logs pasted' if record.get('logs_text') else 'no logs'} · "
+                           f"{record.get('status', 'queued')}")
+                if st.button("Investigate", key=f"live-open-{record['id']}",
+                             use_container_width=True):
+                    st.session_state.live_selected_id = record["id"]
+                    st.session_state.live_run = record["id"]
+
+        st.divider()
+        st.markdown("#### Queue an alert by hand")
+        service_options = sorted(world.services())
+        with st.form("live_alert_form"):
+            service_choice = st.selectbox("Service", service_options + ["other (type below)…"],
+                                          help="List comes from data/services.json; type any name.")
+            service_other = st.text_input("Service name", key="live_service_other",
+                                          placeholder="billing-gateway")
+            alert_text = st.text_area(
+                "Alert text", height=90,
+                placeholder="checkout-service p95 latency > 2000ms for 5m; "
+                            "ConnectionPoolTimeoutError in logs")
+            webhook_body = st.text_area(
+                "Alertmanager / Grafana webhook JSON (optional)", height=150,
+                placeholder='{"alerts":[{"labels":{"service":"checkout-service"},'
+                            '"annotations":{"description":"…"}}]}')
+            log_paste = st.text_area("Log extract (paste what you have)", height=160)
+            log_upload = st.file_uploader("…or upload a log file", type=["log", "txt"],
+                                          key="live_log_file")
+            form_submit = st.form_submit_button("Queue and investigate", type="primary",
+                                                use_container_width=True)
+
+        if form_submit:
+            payload = None
+            if webhook_body.strip():
+                try:
+                    payload = json.loads(webhook_body)
+                except json.JSONDecodeError as exc:
+                    st.error(f"Webhook body is not valid JSON: {exc}")
+                    payload = None
+            service = (service_other.strip() or "unknown-service"
+                       if service_choice.startswith("other") else service_choice)
+            if payload and not service_choice.startswith("other"):
+                webhook_alerts = parse_webhook(payload)
+                if webhook_alerts and webhook_alerts[0].get("service"):
+                    service = ""
+            if not alert_text.strip() and not payload:
+                st.error("Give me the alert text, or paste an Alertmanager/Grafana body.")
+            else:
+                pasted = log_paste
+                if log_upload is not None:
+                    pasted = (pasted + "\n"
+                              + log_upload.getvalue().decode("utf-8", errors="replace")).strip()
+                record = enqueue_manual(service, alert_text.strip(), pasted, world.families(),
+                                        source="manual", origin="typed into the app",
+                                        webhook=payload if isinstance(payload, dict) else None)
+                st.session_state.live_selected_id = record["id"]
+                st.session_state.live_run = record["id"]
+                st.rerun()
+
+    with live_center:
+        live_id = st.session_state.get("live_selected_id")
+        record = get_record(live_id) if live_id else None
+        if record is None and queued:
+            record = queued[0]
+        if record is None:
+            st.info("Nothing to investigate yet. Queue an alert on the left — the same "
+                    "recall, reasoning and feedback loop runs on it as on the fixtures.")
+        else:
+            st.markdown(
+                f"{severity_chip(record.get('severity', 'P2'))}"
+                f"{chip(record['service'])}"
+                f"{chip(record['family'])}"
+                f"{chip('live input · ' + record['source'])}",
+                unsafe_allow_html=True,
+            )
+            st.markdown(f'<div class="oc-alert">{record["alert"]}</div>', unsafe_allow_html=True)
+            supplied, missing = [], []
+            supplied.append(f"`{record['id']}`")
+            (supplied if record.get("logs_text") else missing).append("logs")
+            (supplied if record.get("deploys") else missing).append("deploys")
+            (supplied if record.get("metrics") else missing).append("metrics")
+            st.caption("Supplied: " + (", ".join(supplied) or "—")
+                       + (" · Not supplied: " + ", ".join(missing) if missing else ""))
+            live_memory_on = st.toggle("Memory ON", key="live_memory_on", value=True,
+                                       help="OFF recalls nothing — the control path.")
+            if st.session_state.get("live_run") != record["id"]:
+                st.caption("Press investigate to recall history and reason over this alert.")
+                if st.button("🔍 Investigate this live alert", key=f"live-run-{record['id']}",
+                             type="primary", use_container_width=True):
+                    st.session_state.live_run = record["id"]
+            if st.session_state.get("live_run") == record["id"]:
+                try:
+                    live_inv = run_investigation(record["id"], live_memory_on, live=True)
+                except Exception as exc:  # noqa: BLE001 - surface, never crash the demo
+                    st.error(f"Investigation failed: {type(exc).__name__}: {exc}")
+                    live_inv = None
+                if live_inv:
+                    st.markdown("#### Result")
+                    render_result(live_inv, key_prefix=f"{record['id']}-live")
+                    st.caption("Worked / Failed / Partial retains the outcome in Hindsight under "
+                               "this live incident's ID, so the next alert of this pattern "
+                               "starts from it.")
+
+    st.markdown(
+        '<div class="oc-footer">Seeded history and the incident fixtures are simulated. '
+        'Anything on this tab is real input you supplied. Advisory only: no action is ever '
+        'executed, and the agent\'s learning is persistent memory — not model retraining.</div>',
         unsafe_allow_html=True,
     )
 
@@ -458,24 +729,31 @@ with tab_learning:
         if not required <= set(frame.columns):
             st.error("Benchmark CSV is missing expected columns.")
         else:
-            summary = (frame.groupby("condition")
-                       .agg(incidents=("incident_id", "count"),
+            answered = (frame[frame["llm_answered"].fillna(False).astype(bool)]
+                        if "llm_answered" in frame.columns else frame)
+            summary = (answered.groupby("condition")
+                       .agg(llm_answered=("incident_id", "count"),
                             top1_accuracy=("top1_correct", "mean"),
                             avg_attempts=("attempts_to_resolve", "mean"),
                             avg_minutes=("simulated_minutes", "mean"))
                        .reset_index())
+            totals = frame.groupby("condition")["incident_id"].count()
+            summary["total_rows"] = summary["condition"].map(totals).fillna(0).astype(int)
             summary["condition"] = summary["condition"].map(
                 lambda c: CONDITION_LABELS.get(c, c))
+            summary["answered_of_total"] = summary.apply(
+                lambda row: f"{row['llm_answered']} / {row['total_rows']}", axis=1)
             display = summary.copy()
             display["top1_accuracy"] = (display["top1_accuracy"] * 100).round(1)
             display["avg_attempts"] = display["avg_attempts"].round(2)
             display["avg_minutes"] = display["avg_minutes"].round(1)
             st.dataframe(
                 display.rename(columns={
-                    "condition": "Condition", "incidents": "Incidents",
+                    "condition": "Condition", "answered_of_total": "LLM answered / rows",
                     "top1_accuracy": "Top-1 accuracy (%)", "avg_attempts": "Avg attempts",
                     "avg_minutes": "Avg simulated minutes",
-                }),
+                })[["Condition", "LLM answered / rows", "Top-1 accuracy (%)",
+                   "Avg attempts", "Avg simulated minutes"]],
                 hide_index=True, use_container_width=True,
             )
             if chart_path.exists():
@@ -496,6 +774,7 @@ with tab_learning:
                 st.dataframe(frame, hide_index=True, use_container_width=True)
 
     st.markdown(
-        '<div class="oc-footer">Simulated data. Advisory only, no actions are executed.</div>',
+        '<div class="oc-footer">Benchmark incidents, deploys, logs and metrics are simulated. '
+        'Live alerts (Live alert tab) are real input. Advisory only — no action is executed.</div>',
         unsafe_allow_html=True,
     )

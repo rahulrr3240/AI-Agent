@@ -154,6 +154,9 @@ CSV/JSON/PNG land in `reports/`. Banks are deleted afterwards unless
 
 `scripts/generate_data.py` is the single source of truth: logs, deploys, metrics
 and incidents are generated from the same family templates, and
-`tests/test_data.py` re-checks the invariants for all 48 incidents (log exists,
-signature error present, deploy exists and predates the alert, metrics ordered,
-exactly one working fix in history, no leaked ground truth in eval records).
+`python scripts/validate_data.py` re-checks the invariants for all 48 incidents
+and prints PASS/FAIL (log exists and contains the family signature, referenced
+deploy exists and predates the alert, metrics snapshots are time-ordered,
+history has exactly one working fix, eval records carry no resolution, the
+pattern detector reproduces the stored family, no fix-vocabulary id leaks into
+agent-visible text).

@@ -24,7 +24,6 @@
         "redis_pool_exhaustion",
         "checkout-service"
       ],
-      "true_fix": "rollback_deploy_and_increase_pool",
       "novel": false
     },
     {
@@ -51,7 +50,6 @@
         "memory_leak",
         "search-service"
       ],
-      "true_fix": "rollback_deploy",
       "novel": false
     },
     {
@@ -78,7 +76,6 @@
         "expired_tls_cert",
         "payments-service"
       ],
-      "true_fix": "renew_certificate",
       "novel": false
     },
     {
@@ -105,7 +102,6 @@
         "slow_query_migration",
         "orders-db"
       ],
-      "true_fix": "add_db_index",
       "novel": false
     },
     {
@@ -132,7 +128,6 @@
         "payments_rate_limit",
         "payments-service"
       ],
-      "true_fix": "enable_backoff_circuit_breaker",
       "novel": false
     },
     {
@@ -159,7 +154,6 @@
         "redis_pool_exhaustion",
         "auth-service"
       ],
-      "true_fix": "increase_pool_size",
       "novel": false
     },
     {
@@ -186,7 +180,6 @@
         "memory_leak",
         "payments-service"
       ],
-      "true_fix": "rollback_deploy",
       "novel": false
     },
     {
@@ -213,7 +206,6 @@
         "expired_tls_cert",
         "checkout-service"
       ],
-      "true_fix": "renew_certificate",
       "novel": false
     },
     {
@@ -240,7 +232,6 @@
         "slow_query_migration",
         "orders-db"
       ],
-      "true_fix": "add_db_index",
       "novel": false
     },
     {
@@ -267,7 +258,6 @@
         "payments_rate_limit",
         "checkout-service"
       ],
-      "true_fix": "enable_backoff_circuit_breaker",
       "novel": false
     },
     {
@@ -294,7 +284,6 @@
         "redis_pool_exhaustion",
         "checkout-service"
       ],
-      "true_fix": "rollback_deploy_and_increase_pool",
       "novel": false
     },
     {
@@ -321,7 +310,6 @@
         "memory_leak",
         "search-service"
       ],
-      "true_fix": "rollback_deploy",
       "novel": false
     },
     {
@@ -348,7 +336,6 @@
         "slow_query_migration",
         "payments-service"
       ],
-      "true_fix": "add_db_index",
       "novel": false
     },
     {
@@ -375,7 +362,6 @@
         "payments_rate_limit",
         "payments-service"
       ],
-      "true_fix": "enable_backoff_circuit_breaker",
       "novel": false
     },
     {
@@ -402,7 +388,6 @@
         "expired_tls_cert",
         "auth-service"
       ],
-      "true_fix": "renew_certificate",
       "novel": false
     },
     {
@@ -429,7 +414,6 @@
         "redis_pool_exhaustion",
         "payments-service"
       ],
-      "true_fix": "rollback_deploy_and_increase_pool",
       "novel": false
     },
     {
@@ -456,7 +440,6 @@
         "memory_leak",
         "checkout-service"
       ],
-      "true_fix": "rollback_deploy",
       "novel": false
     },
     {
@@ -482,7 +465,6 @@
         "kafka_consumer_lag",
         "search-service"
       ],
-      "true_fix": "scale_up",
       "novel": true
     },
     {
@@ -508,7 +490,6 @@
         "signing_key_rotation",
         "auth-service"
       ],
-      "true_fix": "rollback_secret_rotation",
       "novel": true
     },
     {
@@ -534,7 +515,6 @@
         "kafka_consumer_lag",
         "search-service"
       ],
-      "true_fix": "scale_up",
       "novel": false
     }
   ]
