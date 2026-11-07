@@ -1,0 +1,61 @@
+run_id,condition,order,incident_id,family,service,novel,top_fix,top1_correct,attempts_to_resolve,resolved,simulated_minutes,memory_backend,llm_backend,llm_model,llm_answered
+20261106-161035-f7f9,A_off,1,INC-101,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,False,2,True,18,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,2,INC-102,memory_leak,search-service,False,rollback_deploy,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,3,INC-103,expired_tls_cert,payments-service,False,renew_certificate,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,4,INC-104,slow_query_migration,orders-db,False,add_db_index,False,2,True,18,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,5,INC-105,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,6,INC-106,redis_pool_exhaustion,auth-service,False,increase_pool_size,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,7,INC-107,memory_leak,payments-service,False,rollback_deploy,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,8,INC-108,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,6,hindsight,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,A_off,9,INC-109,slow_query_migration,orders-db,False,add_db_index,False,2,True,18,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,10,INC-110,payments_rate_limit,checkout-service,False,enable_backoff_circuit_breaker,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,11,INC-111,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,False,2,True,18,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,12,INC-112,memory_leak,search-service,False,rollback_deploy,False,2,True,18,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,13,INC-113,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,14,INC-114,slow_query_migration,orders-db,False,add_db_index,False,2,True,18,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,15,INC-115,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,16,INC-116,redis_pool_exhaustion,auth-service,False,increase_pool_size,False,2,True,18,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,17,INC-117,memory_leak,payments-service,False,rollback_deploy,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,18,INC-118,expired_tls_cert,search-service,False,renew_certificate,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,19,INC-119,kafka_consumer_lag,orders-db,False,scale_up_consumers,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,A_off,20,INC-120,signing_key_rotation,auth-service,False,rollback_rotation,True,1,True,6,hindsight,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,1,INC-101,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,2,INC-102,memory_leak,search-service,False,rollback_deploy,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,3,INC-103,expired_tls_cert,payments-service,False,renew_certificate,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,4,INC-104,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,5,INC-105,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,6,INC-106,redis_pool_exhaustion,auth-service,False,increase_pool_size,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,7,INC-107,memory_leak,payments-service,False,rollback_deploy,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,8,INC-108,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,9,INC-109,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,B_seeded,10,INC-110,payments_rate_limit,checkout-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,11,INC-111,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,12,INC-112,memory_leak,search-service,False,rollback_deploy,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,13,INC-113,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,14,INC-114,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,15,INC-115,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,16,INC-116,redis_pool_exhaustion,auth-service,False,increase_pool_size,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,17,INC-117,memory_leak,payments-service,False,rollback_deploy,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,18,INC-118,expired_tls_cert,search-service,False,renew_certificate,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,19,INC-119,kafka_consumer_lag,orders-db,False,scale_up_consumers,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,B_seeded,20,INC-120,signing_key_rotation,auth-service,False,rollback_rotation,False,2,False,18,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,1,INC-101,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,2,INC-102,memory_leak,search-service,False,rollback_deploy,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,3,INC-103,expired_tls_cert,payments-service,False,renew_certificate,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,4,INC-104,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,5,INC-105,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,6,INC-106,redis_pool_exhaustion,auth-service,False,increase_pool_size,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,7,INC-107,memory_leak,payments-service,False,rollback_deploy,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,8,INC-108,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,9,INC-109,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,10,INC-110,payments_rate_limit,checkout-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,openai/gpt-oss-120b,openai/gpt-oss-120b,True
+20261106-161035-f7f9,C_learning,11,INC-111,redis_pool_exhaustion,checkout-service,False,rollback_deploy_and_increase_pool,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,12,INC-112,memory_leak,search-service,False,rollback_deploy,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,13,INC-113,expired_tls_cert,checkout-service,False,renew_certificate,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,14,INC-114,slow_query_migration,orders-db,False,add_db_index,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,15,INC-115,payments_rate_limit,payments-service,False,enable_backoff_circuit_breaker,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,16,INC-116,redis_pool_exhaustion,auth-service,False,increase_pool_size,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,17,INC-117,memory_leak,payments-service,False,rollback_deploy,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,18,INC-118,expired_tls_cert,search-service,False,renew_certificate,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,19,INC-119,kafka_consumer_lag,orders-db,False,scale_up_consumers,True,1,True,8,local-keyword,heuristic (fallback),heuristic (fallback),False
+20261106-161035-f7f9,C_learning,20,INC-120,signing_key_rotation,auth-service,False,rollback_rotation,False,2,False,18,local-keyword,heuristic (fallback),heuristic (fallback),False

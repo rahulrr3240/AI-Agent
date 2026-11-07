@@ -216,8 +216,9 @@ class GroqLLM:
             attempts += 1
             try:
                 raw, usage = self._complete(attempt_model, attempt_messages, max_tokens, temperature)
-            except LLMError:
-                raise
+            except LLMError as exc:
+                last_error = str(exc)
+                continue
             except Exception as exc:  # noqa: BLE001
                 last_error = f"{type(exc).__name__}: {exc}"
                 continue

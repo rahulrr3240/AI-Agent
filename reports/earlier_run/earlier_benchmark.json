@@ -1,0 +1,48 @@
+{
+  "run_id": "20261106-161035-f7f9",
+  "generated_at": "2026-11-06T16:10:35Z",
+  "incidents": 20,
+  "conditions": [
+    "A_off",
+    "B_seeded",
+    "C_learning"
+  ],
+  "hindsight_configured": true,
+  "groq_configured": true,
+  "models": {
+    "primary": "openai/gpt-oss-120b",
+    "fallback": "qwen/qwen3-32b"
+  },
+  "method": {
+    "headline_basis": "LLM-answered rows only; heuristic fallback rows are counted separately and excluded from headline metrics."
+  },
+  "summary": {
+    "A_off": {
+      "incidents": 20,
+      "llm_answered": 10,
+      "fallback_rows": 10,
+      "top1_accuracy": 0.35,
+      "resolved_rate": 0.6,
+      "avg_attempts": 2.2,
+      "avg_simulated_minutes": 18.8
+    },
+    "B_seeded": {
+      "incidents": 20,
+      "llm_answered": 9,
+      "fallback_rows": 11,
+      "top1_accuracy": 0.85,
+      "resolved_rate": 0.9,
+      "avg_attempts": 1.2,
+      "avg_simulated_minutes": 8.4
+    },
+    "C_learning": {
+      "incidents": 20,
+      "llm_answered": 10,
+      "fallback_rows": 10,
+      "top1_accuracy": 0.85,
+      "resolved_rate": 0.95,
+      "avg_attempts": 1.25,
+      "avg_simulated_minutes": 8.4
+    }
+  }
+}

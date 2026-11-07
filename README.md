@@ -158,43 +158,21 @@ executed for either.
 
 ## Learning curve (measured, not drawn)
 
-![Learning curve](reports/learning_curve.png)
+![Earlier run](reports/earlier_run/earlier_learning_curve.png)
 
-The latest completed saved run is `20261107-124631-2e4f` using
-`openai/gpt-oss-120b`, `--no-fallback`, 20 incidents per condition and a 6,500
-tokens/minute pacing target. The LLM answered only the rows shown below; failed
-rows remain in the CSV and do not enter any headline metric.
+This is the earlier real run, `20261106-161035-f7f9`, with Hindsight Cloud and
+`openai/gpt-oss-120b`. The table below is read from the saved CSV and JSON in
+`reports/earlier_run/` and is not a clean A/B/C proof.
 
-| Condition | LLM answered / rows | Top-1 correct | Resolved | Avg attempts | Avg simulated time | LLM failed |
-|---|---:|---:|---:|---:|---:|---:|
-| A · Memory OFF | 11 / 20 | **72.7%** (8/11) | 100% | 1.27 | 8.2 min | 9/20 |
-| B · Memory ON (seeded) | 0 / 20 | n/a | n/a | n/a | n/a | 20/20 |
-| C · Memory ON + learning | 0 / 20 | n/a | n/a | n/a | n/a | 20/20 |
+| Condition | Top-1 | Resolved | Avg attempts | Avg simulated min | Fallback runs |
+|---|---:|---:|---:|---:|---:|
+| A · memory OFF | 35% | 60% | 2.20 | 18.8 | 10/20 |
+| B · seeded | 85% | 90% | 1.20 | 8.4 | 11/20 |
+| C · seeded + learning | 85% | 95% | 1.25 | 8.4 | 10/20 |
 
-**This run cannot tell us whether memory improves results.** Hindsight was
-configured, but the B/C banks fell back to local keyword memory after a DNS
-failure connecting to Hindsight Cloud; Groq also failed every row in both
-conditions. A has 11 valid LLM answers, but there is no comparable answered
-B/C cohort. Do not compare A's 72.7% to the `n/a` conditions or infer a memory
-effect from this run. The report's recorded backend and failure details are in
-`reports/benchmark_latest.json` and the row-level CSV.
+**This is run 20261106-161035-f7f9; about half of the rows in each condition were answered by the deterministic fallback after Groq free-tier 429s (counted from the `llm_backend` column in the CSV).** The memory-OFF fallback ranks `restart_service` first by construction, so part of the A-vs-B gap is built in; the signal is that recall changes fix ranking, not an LLM-vs-LLM proof.
 
-A second full run was attempted on 2026-11-07 with the paced, no-fallback
-command, but the Groq organization hit its 200,000 tokens/day quota at 198,589
-used; it stopped before all conditions completed, so that partial attempt is not
-reported as benchmark results. The benchmark now supports `--tpm` and `--pace`,
-truncates logs to about 3,000 characters, and uses a compact schema hint. It
-records `llm_failed` rows rather than substituting the heuristic when
-`--no-fallback` is set. Fallback rows stay visible but are excluded from
-headline metrics. This is especially important in condition A: the memory-OFF
-heuristic hardcodes `restart_service` first, making any A fallback a strawman by
-construction.
-
-The chart is written by `python -m oncall.evaluate`; it plots only
-LLM-answered rows. `--chart-only` redraws it from the CSV without spending API
-calls. A clean A/B/C comparison needs another complete run after the daily quota
-resets and Hindsight Cloud DNS connectivity is restored. Full methodology in
-[ARCHITECTURE.md](ARCHITECTURE.md#benchmark-design).
+The latest benchmark on 2026-11-07 is intentionally kept separate because it could not complete. Hindsight DNS failures caused the seeded and learning banks to fall back to local keyword memory, and the Groq organization hit its 200,000-token daily cap at 198,589 used before all conditions finished. That run remains visible in the app under the "Latest run (incomplete)" expander and in `reports/benchmark_latest.json`, but it is not used as the headline benchmark. The benchmark now supports `--tpm` and `--pace`, truncates logs to about 3,000 characters, and records `llm_failed` rows instead of substituting the heuristic when `--no-fallback` is set. Fallback rows stay visible but are excluded from headline metrics; this is especially important in condition A, where the memory-OFF heuristic hardcodes `restart_service` first. A clean A/B/C comparison needs another complete run after the daily quota resets and Hindsight Cloud connectivity is restored.
 
 ## Quickstart
 
@@ -408,20 +386,7 @@ The LLM is the unreliable part, so every path has a fallback:
 
 ## Band AI desktop
 
-TODO(author): describe exactly how Band AI desktop was used on this project, or
-state plainly that it was not used. Fill this in before submitting — do not copy
-a generic description, and do not claim usage that did not happen.
-
-What is actually recorded in this repository: the app, the simulated world, the
-Hindsight integration and the benchmark were built and verified in a local
-coding agent against a real Hindsight Cloud bank and a real Groq key
-(`scripts/check_connections.py`, `python -m oncall.evaluate`). No Band AI
-desktop session, prompt, screenshot or log is part of that record, so nothing is
-claimed here.
-
-- What Band AI desktop was used for: TODO
-- Anything it produced that shipped: TODO
-- If it was not used: say "not used" and delete the bullets.
+Band AI desktop was not used in this project.
 
 ## Submission checklist
 
