@@ -102,45 +102,20 @@ exercised end-to-end repeatedly; agentic is opt-in.
 
 ## Benchmark results and caveats
 
-Measured run `20261106-161035-f7f9` (20 incidents × 3 conditions, Hindsight Cloud,
-`openai/gpt-oss-120b`), 979 s total:
+No A/B/C numbers are reported. The benchmark could not be completed here: one
+attempt hit the Groq organization's daily token quota, and a separate run lost
+Hindsight Cloud connectivity (DNS failure), which sent the seeded and learning
+banks to local keyword memory. A full run exists in the development history, but
+its artifacts could not be reproduced from the files in this repository, so none
+of its figures are quoted.
 
-| Condition | Top-1 | Resolved | Avg attempts | Avg simulated min | Fallback runs |
-|---|---|---|---|---|---|
-| A · memory OFF | 35% | 60% | 2.20 | 18.8 | 10/20 |
-| B · seeded | 85% | 90% | 1.20 | 8.4 | 11/20 |
-| C · seeded + learning | 85% | 95% | 1.25 | 8.4 | 10/20 |
-
-- The benchmark calls real Groq and real Hindsight when keys are configured.
-  The CSV records the model, memory backend and whether any run fell back.
-- **Groq free-tier TPM is the main confound.** At 8,000 tokens/minute, back-to-back
-  investigations produced 429s; roughly half of all runs (in every condition)
-  ended on the deterministic analyst after the retry chain. Those rows are
-  flagged `llm_backend=heuristic (fallback)`. The fallback uses the same recalled
-  memories, so the A/B gap is still a memory effect, but the absolute numbers
-  are not all LLM output. Pacing the run or using a paid tier would give cleaner
-  numbers; `llm.py` deliberately prefers a 4-second deterministic answer over a
-  30-second stall.
-- **C's top-1 is flat relative to B.** Seeded history already covers every
-  recurring family, so learning can only help where a new pattern repeats. The
-  visible case is `INC-121` (Kafka repeat): C recalls the `scale_up` outcome
-  written for `INC-119` (1 memory, `no_relevant_history=false`) and gets it
-  first. C also resolves `INC-116` on the second attempt, but that is because the
-  LLM returned two candidates there, not because of a learned fix.
-- **B's `INC-116` is unresolved** because the model returned a single ranked fix
-  (`increase_pool_size`). The schema allows 1–5 fixes. A deterministic guardrail
-  could pad the list, but inventing candidates just to keep the simulation going
-  would hide real model behaviour, so it was left visible and is reported here.
-- **Novel cases:** B and C correctly flag both `novel=true` incidents. `INC-120`
-  (signing-key rotation) is still unsolved by B/C — conservative generic triage
-  ranked `restart_service` and never reached the true fix, while A guessed right
-  from the logs. Honest "no history" is not the same as correct.
-- **Conflicting memory:** `INC-106` (config drift → `increase_pool_size`) and
-  `INC-116` (deploy → `rollback_deploy_and_increase_pool`) share a family but
-  need opposite fixes. B/C rank whichever variant memory favours first and mark
-  the conflict with lower confidence.
-- Novel-incident flag accuracy is scored only for the two `novel=true` incidents
-  and only when memory is ON. Condition A has no recall to be calibrated about.
+- The benchmark calls real Groq and real Hindsight when keys are configured, and
+  the CSV records the model, memory backend and whether a row fell back.
+- `llm.py` deliberately prefers a fast deterministic answer over a long stall, so
+  on a free tier a large share of rows can be ended by the heuristic analyst.
+  The CSV labels every such row `llm_backend=heuristic (fallback)`.
+- The memory evidence reported in the README is Compare mode on `INC-103`, which
+  is reproducible from the seeded demo bank.
 
 ## Environment / known issues
 

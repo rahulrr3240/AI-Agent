@@ -37,13 +37,13 @@ click **Worked** under `renew_certificate`.
 > "One click stores the outcome in Hindsight. Next time this pattern appears —
 > on any service — the agent already knows."
 
-**0:48 — The learning curve.**
+**0:48 — What the benchmark can and cannot show.**
 Open the **Learning curve** tab.
-> "This isn't a drawing. Every point is a real run of 20 eval incidents. Memory
-> off is the weakest line — it ranks a generic restart first and misses more
-> often; with seeded memory the same incidents rank correctly far more often;
-> learning adds the new pattern the agent resolved itself, including a Kafka
-> incident it had never seen. This is memory, not model retraining."
+> "The full benchmark didn't finish — I hit the free Groq quota on one attempt and
+> lost Hindsight connectivity on another — so I'm not quoting numbers from it. The
+> memory evidence is the comparison I just ran: same alert, memory off ranks a
+> restart first, memory on recalls the certificate fixes and puts them on top.
+> This is memory, not model retraining."
 
 **0:56 — Close.**
 > "OnCall Memory: the team's incident history, available at 3am. Simulated data,
