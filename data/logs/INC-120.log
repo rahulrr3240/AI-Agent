@@ -1,0 +1,7 @@
+# simulated log extract — INC-120 — auth-service (Go 1.22)
+# window: 2026-11-06T06:34:00Z .. 2026-11-06T06:43:00Z
+time=2026-11-06T06:36:00Z level=info service=auth-service msg="JWKS refresh from sso.internal (keys=3)"
+time=2026-11-06T06:36:48Z level=error service=auth-service msg="OIDC token validation failed: invalid_client: signing key kid=2026-10-31 not recognized"
+time=2026-11-06T06:37:54Z level=warn service=auth-service msg="jwt verify failed for issuer https://sso.internal (unknown kid)"
+time=2026-11-06T06:39:24Z level=error service=auth-service msg="401 rate above threshold: 62% of /v1/session/verify"
+time=2026-11-06T06:41:30Z level=error service=auth-service msg="token exchange rejected: invalid_client (kid=2026-10-31)"

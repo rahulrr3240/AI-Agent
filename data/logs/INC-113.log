@@ -1,0 +1,7 @@
+# simulated log extract — INC-113 — payments-service (Python 3.11 / FastAPI)
+# window: 2026-11-05T00:27:00Z .. 2026-11-05T00:36:00Z
+2026-11-05 00:28:06,000 INFO    [payments-service] applied migration-0084 (0084_orders_dispute_flag); backfill complete
+2026-11-05 00:30:24,000 WARN    [payments-service] db query slow: 5127ms (threshold 500ms) query=orders.by_customer
+2026-11-05 00:31:00,000 ERROR   [payments-service] db error: canceling statement due to lock timeout (SQLSTATE 55P03)
+2026-11-05 00:32:06,000 ERROR   [payments-service] upstream orders-db request failed after 5000ms: lock timeout
+2026-11-05 00:34:18,000 WARN    [payments-service] connection pool waiting=18 active=20

@@ -1,0 +1,9 @@
+# simulated log extract — INC-116 — payments-service (Python 3.11 / FastAPI)
+# window: 2026-11-06T02:15:00Z .. 2026-11-06T02:24:00Z
+2026-11-06 02:15:36,000 INFO    [payments-service] starting payments-service version v2.21.0 (commit 04cfc66)
+2026-11-06 02:15:54,000 INFO    [payments-service] redis pool initialised size=20 min_idle=2 timeout=2000ms
+2026-11-06 02:18:36,000 WARN    [payments-service] redis pool exhausted active=20 idle=0 waiting=22
+2026-11-06 02:19:18,000 ERROR   [payments-service] ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)
+2026-11-06 02:19:36,000 ERROR   [payments-service] ConnectionPoolTimeoutError: Timeout waiting for connection from pool
+2026-11-06 02:20:42,000 ERROR   [payments-service] POST /v1/charges 503 provider=redis-cache elapsed=2.01s
+2026-11-06 02:22:12,000 WARN    [payments-service] retry 1/2 after redis timeout

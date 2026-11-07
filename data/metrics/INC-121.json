@@ -1,0 +1,104 @@
+{
+  "incident_id": "INC-121",
+  "service": "search-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 5023,
+    "peak_error_rate_pct": 18.33,
+    "service": "search-service",
+    "family": "kafka_consumer_lag"
+  },
+  "series": [
+    {
+      "t": "2026-11-06T07:08:00Z",
+      "p95_latency_ms": 573,
+      "error_rate_pct": 0.31,
+      "cpu_pct": 28.9,
+      "consumer_lag": 221880
+    },
+    {
+      "t": "2026-11-06T07:09:00Z",
+      "p95_latency_ms": 584,
+      "error_rate_pct": 0.39,
+      "cpu_pct": 30.2,
+      "consumer_lag": 228080
+    },
+    {
+      "t": "2026-11-06T07:10:00Z",
+      "p95_latency_ms": 540,
+      "error_rate_pct": 0.2,
+      "cpu_pct": 32.2,
+      "consumer_lag": 234280
+    },
+    {
+      "t": "2026-11-06T07:11:00Z",
+      "p95_latency_ms": 559,
+      "error_rate_pct": 0.21,
+      "cpu_pct": 28.8,
+      "consumer_lag": 240480
+    },
+    {
+      "t": "2026-11-06T07:12:00Z",
+      "p95_latency_ms": 539,
+      "error_rate_pct": 0.29,
+      "cpu_pct": 33.1,
+      "consumer_lag": 246680
+    },
+    {
+      "t": "2026-11-06T07:13:00Z",
+      "p95_latency_ms": 536,
+      "error_rate_pct": 0.24,
+      "cpu_pct": 28.1,
+      "consumer_lag": 252880
+    },
+    {
+      "t": "2026-11-06T07:14:00Z",
+      "p95_latency_ms": 4122,
+      "error_rate_pct": 14.74,
+      "cpu_pct": 76.8,
+      "consumer_lag": 259080
+    },
+    {
+      "t": "2026-11-06T07:15:00Z",
+      "p95_latency_ms": 5023,
+      "error_rate_pct": 18.33,
+      "cpu_pct": 86.5,
+      "consumer_lag": 265280
+    },
+    {
+      "t": "2026-11-06T07:16:00Z",
+      "p95_latency_ms": 4165,
+      "error_rate_pct": 14.74,
+      "cpu_pct": 74.5,
+      "consumer_lag": 271480
+    },
+    {
+      "t": "2026-11-06T07:17:00Z",
+      "p95_latency_ms": 3241,
+      "error_rate_pct": 11.13,
+      "cpu_pct": 66.8,
+      "consumer_lag": 277680
+    },
+    {
+      "t": "2026-11-06T07:18:00Z",
+      "p95_latency_ms": 2329,
+      "error_rate_pct": 7.41,
+      "cpu_pct": 50.0,
+      "consumer_lag": 283880
+    },
+    {
+      "t": "2026-11-06T07:19:00Z",
+      "p95_latency_ms": 1433,
+      "error_rate_pct": 3.99,
+      "cpu_pct": 39.6,
+      "consumer_lag": 290080
+    },
+    {
+      "t": "2026-11-06T07:20:00Z",
+      "p95_latency_ms": 573,
+      "error_rate_pct": 0.37,
+      "cpu_pct": 33.4,
+      "consumer_lag": 296280
+    }
+  ]
+}

@@ -1,0 +1,1082 @@
+{
+  "incidents": [
+    {
+      "id": "INC-002",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-03-04T02:14:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v2.18.0 cut the pool from 100 to 40 while peak concurrency stayed around 114.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "rollback_deploy_and_increase_pool",
+          "outcome": "worked",
+          "note": "rolled back to v2.17.4 and raised the pool to 100"
+        }
+      ],
+      "resolution_minutes": 25,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0001",
+      "log_file": "data/logs/INC-002.log",
+      "metrics_file": "data/metrics/INC-002.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-005",
+      "family": "redis_pool_exhaustion",
+      "service": "auth-service",
+      "opened_at": "2026-03-19T09:41:00Z",
+      "alert": "auth-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 2.8s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v4.2.0 cut the pool from 80 to 30 while peak concurrency stayed around 92.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 10 min"
+        },
+        {
+          "fix": "rollback_deploy_and_increase_pool",
+          "outcome": "worked",
+          "note": "rolled back to v4.1.6 and raised the pool to 80"
+        }
+      ],
+      "resolution_minutes": 31,
+      "resolved_by": "marcus",
+      "related_deploy_id": "DEP-0005",
+      "log_file": "data/logs/INC-005.log",
+      "metrics_file": "data/metrics/INC-005.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "auth-service"
+      ]
+    },
+    {
+      "id": "INC-009",
+      "family": "redis_pool_exhaustion",
+      "service": "payments-service",
+      "opened_at": "2026-04-11T18:02:00Z",
+      "alert": "payments-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 3.9s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Redis pool on payments-service had been left at 20 connections after a configmap edit; peak concurrency needs ~60. No deploy involved.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "increase_pool_size",
+          "outcome": "worked",
+          "note": "raised pool to 60; waiting connections dropped to zero"
+        }
+      ],
+      "resolution_minutes": 18,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-009.log",
+      "metrics_file": "data/metrics/INC-009.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-014",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-06-02T03:37:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v2.31.0 cut the pool from 50 to 20 while peak concurrency stayed around 57.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 14 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy_and_increase_pool",
+          "outcome": "worked",
+          "note": "rolled back to v2.30.2 and raised the pool to 60"
+        }
+      ],
+      "resolution_minutes": 25,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0012",
+      "log_file": "data/logs/INC-014.log",
+      "metrics_file": "data/metrics/INC-014.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-019",
+      "family": "redis_pool_exhaustion",
+      "service": "auth-service",
+      "opened_at": "2026-07-23T14:18:00Z",
+      "alert": "auth-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 2.8s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v4.7.1 cut the pool from 80 to 25 while peak concurrency stayed around 92.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 10 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "increase_pool_size",
+          "outcome": "failed",
+          "note": "pool increase applied; waiting connections did not drop"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v4.7.0; the blocking call disappeared"
+        }
+      ],
+      "resolution_minutes": 40,
+      "resolved_by": "marcus",
+      "related_deploy_id": "DEP-0019",
+      "log_file": "data/logs/INC-019.log",
+      "metrics_file": "data/metrics/INC-019.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "auth-service"
+      ]
+    },
+    {
+      "id": "INC-024",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-09-03T02:14:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v2.40.0 cut the pool from 60 to 25 while peak concurrency stayed around 69.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 8 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy_and_increase_pool",
+          "outcome": "worked",
+          "note": "rolled back to v2.39.3 and raised the pool to 60"
+        }
+      ],
+      "resolution_minutes": 22,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0023",
+      "log_file": "data/logs/INC-024.log",
+      "metrics_file": "data/metrics/INC-024.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-003",
+      "family": "memory_leak",
+      "service": "search-service",
+      "opened_at": "2026-03-08T11:05:00Z",
+      "alert": "search-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on search-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v5.2.0: the new in-memory response cache is never evicted, RSS grows ~42 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 8 min"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v5.1.7; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 35,
+      "resolved_by": "alice",
+      "related_deploy_id": "DEP-0002",
+      "log_file": "data/logs/INC-003.log",
+      "metrics_file": "data/metrics/INC-003.json",
+      "tags": [
+        "memory_leak",
+        "search-service"
+      ]
+    },
+    {
+      "id": "INC-007",
+      "family": "memory_leak",
+      "service": "payments-service",
+      "opened_at": "2026-03-27T06:52:00Z",
+      "alert": "payments-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on payments-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v2.0.0: the new in-memory response cache is never evicted, RSS grows ~55 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 6 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v1.9.8; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 28,
+      "resolved_by": "dana",
+      "related_deploy_id": "DEP-0006",
+      "log_file": "data/logs/INC-007.log",
+      "metrics_file": "data/metrics/INC-007.json",
+      "tags": [
+        "memory_leak",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-012",
+      "family": "memory_leak",
+      "service": "checkout-service",
+      "opened_at": "2026-05-06T21:13:00Z",
+      "alert": "checkout-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on checkout-service"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Leak in v2.25.1: the new in-memory response cache is never evicted, RSS grows ~63 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 11 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v2.24.9; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 33,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0011",
+      "log_file": "data/logs/INC-012.log",
+      "metrics_file": "data/metrics/INC-012.json",
+      "tags": [
+        "memory_leak",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-017",
+      "family": "memory_leak",
+      "service": "search-service",
+      "opened_at": "2026-07-02T08:29:00Z",
+      "alert": "search-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on search-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v5.9.0: the new in-memory response cache is never evicted, RSS grows ~48 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "added 4 replicas; throughput flat, latency unchanged"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v5.8.4; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 41,
+      "resolved_by": "alice",
+      "related_deploy_id": "DEP-0015",
+      "log_file": "data/logs/INC-017.log",
+      "metrics_file": "data/metrics/INC-017.json",
+      "tags": [
+        "memory_leak",
+        "search-service"
+      ]
+    },
+    {
+      "id": "INC-021",
+      "family": "memory_leak",
+      "service": "search-service",
+      "opened_at": "2026-08-14T19:44:00Z",
+      "alert": "search-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on search-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v6.1.0: the new in-memory response cache is never evicted, RSS grows ~71 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 8 min"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "added 4 replicas; throughput flat, latency unchanged"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v6.0.3; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 38,
+      "resolved_by": "alice",
+      "related_deploy_id": "DEP-0020",
+      "log_file": "data/logs/INC-021.log",
+      "metrics_file": "data/metrics/INC-021.json",
+      "tags": [
+        "memory_leak",
+        "search-service"
+      ]
+    },
+    {
+      "id": "INC-026",
+      "family": "memory_leak",
+      "service": "payments-service",
+      "opened_at": "2026-09-24T04:06:00Z",
+      "alert": "payments-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on payments-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v2.14.0: the new in-memory response cache is never evicted, RSS grows ~39 MiB/min until the container hits its limit and is OOMKilled.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v2.13.6; memory and OOM restarts returned to baseline"
+        }
+      ],
+      "resolution_minutes": 26,
+      "resolved_by": "dana",
+      "related_deploy_id": "DEP-0026",
+      "log_file": "data/logs/INC-026.log",
+      "metrics_file": "data/metrics/INC-026.json",
+      "tags": [
+        "memory_leak",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-001",
+      "family": "expired_tls_cert",
+      "service": "payments-service",
+      "opened_at": "2026-03-01T02:12:00Z",
+      "alert": "payments-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "The certificate for api.payments-gateway.com expired at 2026-02-28T23:59:59Z; automatic renewal was never wired up, so every outbound handshake fails verification.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 8 min"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rollback completed but the failure persisted"
+        },
+        {
+          "fix": "renew_certificate",
+          "outcome": "worked",
+          "note": "renewed api.payments-gateway.com and reloaded it on all pods; handshakes recovered"
+        }
+      ],
+      "resolution_minutes": 47,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-001.log",
+      "metrics_file": "data/metrics/INC-001.json",
+      "tags": [
+        "expired_tls_cert",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-008",
+      "family": "expired_tls_cert",
+      "service": "checkout-service",
+      "opened_at": "2026-04-02T07:31:00Z",
+      "alert": "checkout-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "The certificate for api.payments-gateway.com expired at 2026-04-01T00:00:00Z; automatic renewal was never wired up, so every outbound handshake fails verification.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 8 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rollback completed but the failure persisted"
+        },
+        {
+          "fix": "renew_certificate",
+          "outcome": "worked",
+          "note": "renewed api.payments-gateway.com and reloaded it on all pods; handshakes recovered"
+        }
+      ],
+      "resolution_minutes": 52,
+      "resolved_by": "priya",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-008.log",
+      "metrics_file": "data/metrics/INC-008.json",
+      "tags": [
+        "expired_tls_cert",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-013",
+      "family": "expired_tls_cert",
+      "service": "auth-service",
+      "opened_at": "2026-05-27T16:09:00Z",
+      "alert": "auth-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "The certificate for sso.internal expired at 2026-05-27T00:00:00Z; automatic renewal was never wired up, so every outbound handshake fails verification.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 13 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rolled back one release; errors unchanged, so the deploy was not the cause"
+        },
+        {
+          "fix": "renew_certificate",
+          "outcome": "worked",
+          "note": "renewed sso.internal and reloaded it on all pods; handshakes recovered"
+        }
+      ],
+      "resolution_minutes": 39,
+      "resolved_by": "marcus",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-013.log",
+      "metrics_file": "data/metrics/INC-013.json",
+      "tags": [
+        "expired_tls_cert",
+        "auth-service"
+      ]
+    },
+    {
+      "id": "INC-020",
+      "family": "expired_tls_cert",
+      "service": "payments-service",
+      "opened_at": "2026-08-03T03:48:00Z",
+      "alert": "payments-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "The certificate for api.payments-gateway.com expired at 2026-08-02T12:00:00Z; automatic renewal was never wired up, so every outbound handshake fails verification.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 10 min"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rolled back one release; errors unchanged, so the deploy was not the cause"
+        },
+        {
+          "fix": "renew_certificate",
+          "outcome": "worked",
+          "note": "renewed api.payments-gateway.com and reloaded it on all pods; handshakes recovered"
+        }
+      ],
+      "resolution_minutes": 44,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-020.log",
+      "metrics_file": "data/metrics/INC-020.json",
+      "tags": [
+        "expired_tls_cert",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-027",
+      "family": "expired_tls_cert",
+      "service": "checkout-service",
+      "opened_at": "2026-10-05T22:26:00Z",
+      "alert": "checkout-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "The certificate for api.payments-gateway.com expired at 2026-10-05T18:00:00Z; automatic renewal was never wired up, so every outbound handshake fails verification.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rolled back one release; errors unchanged, so the deploy was not the cause"
+        },
+        {
+          "fix": "renew_certificate",
+          "outcome": "worked",
+          "note": "renewed api.payments-gateway.com and reloaded it on all pods; handshakes recovered"
+        }
+      ],
+      "resolution_minutes": 36,
+      "resolved_by": "priya",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-027.log",
+      "metrics_file": "data/metrics/INC-027.json",
+      "tags": [
+        "expired_tls_cert",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-004",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-03-12T13:22:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Migration 0042_add_orders_region added a filter on orders(customer_id, created_at) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 11 min"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "added 4 replicas; throughput flat, latency unchanged"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(customer_id, created_at); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 62,
+      "resolved_by": "ravi",
+      "related_deploy_id": "DEP-0004",
+      "log_file": "data/logs/INC-004.log",
+      "metrics_file": "data/metrics/INC-004.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ]
+    },
+    {
+      "id": "INC-010",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-04-17T10:04:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Migration 0051_add_orders_channel added a filter on orders(status, updated_at) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart gave 13 min of relief, then the same errors returned"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "added 4 replicas; throughput flat, latency unchanged"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(status, updated_at); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 55,
+      "resolved_by": "ravi",
+      "related_deploy_id": "DEP-0010",
+      "log_file": "data/logs/INC-010.log",
+      "metrics_file": "data/metrics/INC-010.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ]
+    },
+    {
+      "id": "INC-015",
+      "family": "slow_query_migration",
+      "service": "checkout-service",
+      "opened_at": "2026-06-11T15:40:00Z",
+      "alert": "checkout-service query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Migration 0058_orders_promo_code added a filter on orders(promo_code, created_at) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "added 4 replicas; throughput flat, latency unchanged"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(promo_code, created_at); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 48,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0013",
+      "log_file": "data/logs/INC-015.log",
+      "metrics_file": "data/metrics/INC-015.json",
+      "tags": [
+        "slow_query_migration",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-018",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-07-15T01:57:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Migration 0063_orders_fulfilment_state added a filter on orders(fulfilment_state) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "scaled out, but the bottleneck moved rather than disappeared"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(fulfilment_state); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 58,
+      "resolved_by": "ravi",
+      "related_deploy_id": "DEP-0017",
+      "log_file": "data/logs/INC-018.log",
+      "metrics_file": "data/metrics/INC-018.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ]
+    },
+    {
+      "id": "INC-022",
+      "family": "slow_query_migration",
+      "service": "payments-service",
+      "opened_at": "2026-08-21T12:33:00Z",
+      "alert": "payments-service query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Migration 0069_orders_settlement_id added a filter on orders(settlement_id) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 7 min"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "scaled out, but the bottleneck moved rather than disappeared"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(settlement_id); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 51,
+      "resolved_by": "dana",
+      "related_deploy_id": "DEP-0021",
+      "log_file": "data/logs/INC-022.log",
+      "metrics_file": "data/metrics/INC-022.json",
+      "tags": [
+        "slow_query_migration",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-025",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-09-12T05:19:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Migration 0074_orders_refund_state added a filter on orders(refund_state, created_at) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "failed",
+          "note": "scaled out, but the bottleneck moved rather than disappeared"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "worked",
+          "note": "created index on orders(refund_state, created_at); query dropped from 8.4s to 41ms"
+        }
+      ],
+      "resolution_minutes": 47,
+      "resolved_by": "ravi",
+      "related_deploy_id": "DEP-0025",
+      "log_file": "data/logs/INC-025.log",
+      "metrics_file": "data/metrics/INC-025.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ]
+    },
+    {
+      "id": "INC-006",
+      "family": "payments_rate_limit",
+      "service": "payments-service",
+      "opened_at": "2026-03-22T20:15:00Z",
+      "alert": "payments-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Retry traffic to payments-gateway exceeded its 120 req/min limit after the client started retrying immediately with no jitter, producing 429 storms.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "enable_backoff_circuit_breaker",
+          "outcome": "worked",
+          "note": "enabled exponential backoff + circuit breaker; 429s stopped cascading"
+        }
+      ],
+      "resolution_minutes": 30,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-006.log",
+      "metrics_file": "data/metrics/INC-006.json",
+      "tags": [
+        "payments_rate_limit",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-011",
+      "family": "payments_rate_limit",
+      "service": "checkout-service",
+      "opened_at": "2026-04-25T11:08:00Z",
+      "alert": "checkout-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Retry traffic to payments-gateway exceeded its 120 req/min limit after the client started retrying immediately with no jitter, producing 429 storms.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 8 min"
+        },
+        {
+          "fix": "enable_backoff_circuit_breaker",
+          "outcome": "worked",
+          "note": "enabled exponential backoff + circuit breaker; 429s stopped cascading"
+        }
+      ],
+      "resolution_minutes": 34,
+      "resolved_by": "priya",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-011.log",
+      "metrics_file": "data/metrics/INC-011.json",
+      "tags": [
+        "payments_rate_limit",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-016",
+      "family": "payments_rate_limit",
+      "service": "payments-service",
+      "opened_at": "2026-06-19T17:51:00Z",
+      "alert": "payments-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Retry traffic to payments-gateway exceeded its 120 req/min limit after the client started retrying immediately with no jitter, producing 429 storms.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "enable_backoff_circuit_breaker",
+          "outcome": "worked",
+          "note": "enabled exponential backoff + circuit breaker; 429s stopped cascading"
+        }
+      ],
+      "resolution_minutes": 27,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-016.log",
+      "metrics_file": "data/metrics/INC-016.json",
+      "tags": [
+        "payments_rate_limit",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-023",
+      "family": "payments_rate_limit",
+      "service": "checkout-service",
+      "opened_at": "2026-08-28T09:37:00Z",
+      "alert": "checkout-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Retry traffic to payments-gateway exceeded its 120 req/min limit after the client started retrying immediately with no jitter, producing 429 storms.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "pods restarted clean, but the alert fired again after 10 min"
+        },
+        {
+          "fix": "enable_backoff_circuit_breaker",
+          "outcome": "worked",
+          "note": "enabled exponential backoff + circuit breaker; 429s stopped cascading"
+        }
+      ],
+      "resolution_minutes": 32,
+      "resolved_by": "priya",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-023.log",
+      "metrics_file": "data/metrics/INC-023.json",
+      "tags": [
+        "payments_rate_limit",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-028",
+      "family": "payments_rate_limit",
+      "service": "payments-service",
+      "opened_at": "2026-10-14T14:03:00Z",
+      "alert": "payments-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Retry traffic to payments-gateway exceeded its 120 req/min limit after the client started retrying immediately with no jitter, producing 429 storms.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; no lasting improvement"
+        },
+        {
+          "fix": "enable_backoff_circuit_breaker",
+          "outcome": "worked",
+          "note": "enabled exponential backoff + circuit breaker; 429s stopped cascading"
+        }
+      ],
+      "resolution_minutes": 29,
+      "resolved_by": "dana",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-028.log",
+      "metrics_file": "data/metrics/INC-028.json",
+      "tags": [
+        "payments_rate_limit",
+        "payments-service"
+      ]
+    }
+  ]
+}

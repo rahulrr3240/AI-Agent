@@ -1,0 +1,104 @@
+{
+  "incident_id": "INC-023",
+  "service": "checkout-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 3407,
+    "peak_error_rate_pct": 18.29,
+    "service": "checkout-service",
+    "family": "payments_rate_limit"
+  },
+  "series": [
+    {
+      "t": "2026-08-28T09:31:00Z",
+      "p95_latency_ms": 369,
+      "error_rate_pct": 0.21,
+      "cpu_pct": 30.1,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:32:00Z",
+      "p95_latency_ms": 402,
+      "error_rate_pct": 0.32,
+      "cpu_pct": 28.5,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:33:00Z",
+      "p95_latency_ms": 369,
+      "error_rate_pct": 0.22,
+      "cpu_pct": 30.3,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:34:00Z",
+      "p95_latency_ms": 395,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 33.0,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:35:00Z",
+      "p95_latency_ms": 360,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 31.8,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:36:00Z",
+      "p95_latency_ms": 384,
+      "error_rate_pct": 0.26,
+      "cpu_pct": 31.2,
+      "gateway_429s": 0
+    },
+    {
+      "t": "2026-08-28T09:37:00Z",
+      "p95_latency_ms": 2820,
+      "error_rate_pct": 14.77,
+      "cpu_pct": 72.4,
+      "gateway_429s": 104
+    },
+    {
+      "t": "2026-08-28T09:38:00Z",
+      "p95_latency_ms": 3407,
+      "error_rate_pct": 18.29,
+      "cpu_pct": 87.5,
+      "gateway_429s": 78
+    },
+    {
+      "t": "2026-08-28T09:39:00Z",
+      "p95_latency_ms": 2834,
+      "error_rate_pct": 14.65,
+      "cpu_pct": 75.7,
+      "gateway_429s": 51
+    },
+    {
+      "t": "2026-08-28T09:40:00Z",
+      "p95_latency_ms": 2180,
+      "error_rate_pct": 11.11,
+      "cpu_pct": 62.6,
+      "gateway_429s": 64
+    },
+    {
+      "t": "2026-08-28T09:41:00Z",
+      "p95_latency_ms": 1579,
+      "error_rate_pct": 7.53,
+      "cpu_pct": 55.1,
+      "gateway_429s": 50
+    },
+    {
+      "t": "2026-08-28T09:42:00Z",
+      "p95_latency_ms": 1008,
+      "error_rate_pct": 3.82,
+      "cpu_pct": 42.8,
+      "gateway_429s": 19
+    },
+    {
+      "t": "2026-08-28T09:43:00Z",
+      "p95_latency_ms": 401,
+      "error_rate_pct": 0.22,
+      "cpu_pct": 30.8,
+      "gateway_429s": 0
+    }
+  ]
+}

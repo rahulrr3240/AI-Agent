@@ -1,0 +1,9 @@
+# simulated log extract — INC-021 — search-service (Java 21)
+# window: 2026-08-14T19:37:00Z .. 2026-08-14T19:46:00Z
+2026-08-14 19:37:36.000 INFO  [ search-service ] [http-nio-8080-exec-7] c.v.search.SearchController - starting search-service version v6.1.0 (commit ae77971)
+2026-08-14 19:38:24.000 WARN  [ search-service ] [http-nio-8080-exec-8] c.v.search.SearchController - container memory 3768MiB / limit 4096MiB rss_growth=+71MiB/min
+2026-08-14 19:39:48.000 ERROR [ search-service ] [http-nio-8080-exec-8] c.v.search.SearchController - kubelet: container search-service restarted: OOMKilled (exit code 137)
+2026-08-14 19:40:42.000 INFO  [ search-service ] [http-nio-8080-exec-7] c.v.search.SearchController - probe /healthz ok after restart; memory now 1433MiB
+2026-08-14 19:42:12.000 WARN  [ search-service ] [http-nio-8080-exec-2] c.v.search.SearchController - memory climbing again: 3194MiB rss_growth=+71MiB/min
+2026-08-14 19:43:18.000 ERROR [ search-service ] [http-nio-8080-exec-6] c.v.search.SearchController - OOMKilled: container exceeded its memory limit
+2026-08-14 19:44:54.000 ERROR [ search-service ] [http-nio-8080-exec-6] c.v.search.SearchController - kubelet: BackOff restarting container search-service

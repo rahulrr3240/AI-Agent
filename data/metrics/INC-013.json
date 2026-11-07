@@ -1,0 +1,104 @@
+{
+  "incident_id": "INC-013",
+  "service": "auth-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 2150,
+    "peak_error_rate_pct": 18.23,
+    "service": "auth-service",
+    "family": "expired_tls_cert"
+  },
+  "series": [
+    {
+      "t": "2026-05-27T16:03:00Z",
+      "p95_latency_ms": 259,
+      "error_rate_pct": 0.36,
+      "cpu_pct": 30.4,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:04:00Z",
+      "p95_latency_ms": 228,
+      "error_rate_pct": 0.39,
+      "cpu_pct": 28.4,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:05:00Z",
+      "p95_latency_ms": 259,
+      "error_rate_pct": 0.3,
+      "cpu_pct": 32.7,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:06:00Z",
+      "p95_latency_ms": 256,
+      "error_rate_pct": 0.27,
+      "cpu_pct": 32.7,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:07:00Z",
+      "p95_latency_ms": 246,
+      "error_rate_pct": 0.31,
+      "cpu_pct": 32.2,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:08:00Z",
+      "p95_latency_ms": 250,
+      "error_rate_pct": 0.21,
+      "cpu_pct": 31.9,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-05-27T16:09:00Z",
+      "p95_latency_ms": 1759,
+      "error_rate_pct": 14.6,
+      "cpu_pct": 77.7,
+      "upstream_tls_failures": 65
+    },
+    {
+      "t": "2026-05-27T16:10:00Z",
+      "p95_latency_ms": 2150,
+      "error_rate_pct": 18.23,
+      "cpu_pct": 83.3,
+      "upstream_tls_failures": 71
+    },
+    {
+      "t": "2026-05-27T16:11:00Z",
+      "p95_latency_ms": 1752,
+      "error_rate_pct": 14.68,
+      "cpu_pct": 75.9,
+      "upstream_tls_failures": 58
+    },
+    {
+      "t": "2026-05-27T16:12:00Z",
+      "p95_latency_ms": 1410,
+      "error_rate_pct": 11.04,
+      "cpu_pct": 63.4,
+      "upstream_tls_failures": 50
+    },
+    {
+      "t": "2026-05-27T16:13:00Z",
+      "p95_latency_ms": 1031,
+      "error_rate_pct": 7.52,
+      "cpu_pct": 55.0,
+      "upstream_tls_failures": 29
+    },
+    {
+      "t": "2026-05-27T16:14:00Z",
+      "p95_latency_ms": 611,
+      "error_rate_pct": 3.97,
+      "cpu_pct": 44.6,
+      "upstream_tls_failures": 15
+    },
+    {
+      "t": "2026-05-27T16:15:00Z",
+      "p95_latency_ms": 247,
+      "error_rate_pct": 0.35,
+      "cpu_pct": 29.7,
+      "upstream_tls_failures": 0
+    }
+  ]
+}

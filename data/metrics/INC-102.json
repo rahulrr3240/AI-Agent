@@ -1,0 +1,117 @@
+{
+  "incident_id": "INC-102",
+  "service": "search-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 5036,
+    "peak_error_rate_pct": 18.28,
+    "service": "search-service",
+    "family": "memory_leak"
+  },
+  "series": [
+    {
+      "t": "2026-10-22T08:08:00Z",
+      "p95_latency_ms": 572,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 34.0,
+      "memory_mb": 2048,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:09:00Z",
+      "p95_latency_ms": 576,
+      "error_rate_pct": 0.23,
+      "cpu_pct": 31.6,
+      "memory_mb": 2146,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:10:00Z",
+      "p95_latency_ms": 572,
+      "error_rate_pct": 0.22,
+      "cpu_pct": 30.7,
+      "memory_mb": 2245,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:11:00Z",
+      "p95_latency_ms": 541,
+      "error_rate_pct": 0.34,
+      "cpu_pct": 32.7,
+      "memory_mb": 2343,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:12:00Z",
+      "p95_latency_ms": 547,
+      "error_rate_pct": 0.38,
+      "cpu_pct": 32.6,
+      "memory_mb": 2442,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:13:00Z",
+      "p95_latency_ms": 556,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 28.5,
+      "memory_mb": 2541,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:14:00Z",
+      "p95_latency_ms": 4148,
+      "error_rate_pct": 14.64,
+      "cpu_pct": 76.7,
+      "memory_mb": 2639,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:15:00Z",
+      "p95_latency_ms": 5036,
+      "error_rate_pct": 18.28,
+      "cpu_pct": 88.4,
+      "memory_mb": 2738,
+      "oom_restarts": 0
+    },
+    {
+      "t": "2026-10-22T08:16:00Z",
+      "p95_latency_ms": 4138,
+      "error_rate_pct": 14.72,
+      "cpu_pct": 77.7,
+      "memory_mb": 2836,
+      "oom_restarts": 1
+    },
+    {
+      "t": "2026-10-22T08:17:00Z",
+      "p95_latency_ms": 3224,
+      "error_rate_pct": 11.01,
+      "cpu_pct": 63.4,
+      "memory_mb": 2935,
+      "oom_restarts": 1
+    },
+    {
+      "t": "2026-10-22T08:18:00Z",
+      "p95_latency_ms": 2331,
+      "error_rate_pct": 7.42,
+      "cpu_pct": 55.1,
+      "memory_mb": 3034,
+      "oom_restarts": 1
+    },
+    {
+      "t": "2026-10-22T08:19:00Z",
+      "p95_latency_ms": 1440,
+      "error_rate_pct": 3.93,
+      "cpu_pct": 42.2,
+      "memory_mb": 3132,
+      "oom_restarts": 1
+    },
+    {
+      "t": "2026-10-22T08:20:00Z",
+      "p95_latency_ms": 560,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 29.6,
+      "memory_mb": 3231,
+      "oom_restarts": 1
+    }
+  ]
+}

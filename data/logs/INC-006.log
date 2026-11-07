@@ -1,0 +1,8 @@
+# simulated log extract — INC-006 — payments-service (Python 3.11 / FastAPI)
+# window: 2026-03-22T20:08:00Z .. 2026-03-22T20:17:00Z
+2026-03-22 20:10:06,000 WARN    [payments-service] gateway payments-gateway responded 429 (retry-after: 12s) attempt=1/3
+2026-03-22 20:10:42,000 ERROR   [payments-service] charge failed: HTTP 429 Too Many Requests from payments-gateway request_id=req_30444
+2026-03-22 20:11:30,000 WARN    [payments-service] gateway payments-gateway responded 429 (retry-after: 16s) attempt=2/3
+2026-03-22 20:12:24,000 ERROR   [payments-service] HTTP 429 Too Many Requests from payments-gateway (rate_limit_remaining=0)
+2026-03-22 20:13:12,000 ERROR   [payments-service] circuit breaker still closed: failures=17/20 window=60s
+2026-03-22 20:14:12,000 WARN    [payments-service] retry storm: 143 in-flight retries, no jitter

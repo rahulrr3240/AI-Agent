@@ -1,0 +1,7 @@
+# simulated log extract — INC-121 — search-service (Java 21)
+# window: 2026-11-06T07:07:00Z .. 2026-11-06T07:16:00Z
+2026-11-06 07:08:48.000 WARN  [ search-service ] [http-nio-8080-exec-4] c.v.search.SearchController - consumer group search-indexer lag=221880 partitions=12
+2026-11-06 07:09:54.000 WARN  [ search-service ] [http-nio-8080-exec-9] c.v.search.SearchController - rebalance completed in 43s; 6 consumers assigned 12 partitions
+2026-11-06 07:11:12.000 ERROR [ search-service ] [http-nio-8080-exec-6] c.v.search.SearchController - KafkaConsumer poll timeout: no records for 30000ms
+2026-11-06 07:12:36.000 WARN  [ search-service ] [http-nio-8080-exec-3] c.v.search.SearchController - consumer group lag=237080 (growing)
+2026-11-06 07:14:42.000 WARN  [ search-service ] [http-nio-8080-exec-8] c.v.search.SearchController - index freshness SLO breached: newest indexed product is 41 min old

@@ -1,0 +1,71 @@
+{
+  "services": [
+    {
+      "name": "checkout-service",
+      "team": "Payments & Checkout",
+      "runtime": "Node.js 20",
+      "dependencies": [
+        "orders-db",
+        "redis-cache",
+        "payments-service"
+      ],
+      "slo_p95_ms": 400,
+      "slo_error_rate_pct": 0.5,
+      "description": "Cart validation and order placement API.",
+      "primary_oncall": "priya"
+    },
+    {
+      "name": "auth-service",
+      "team": "Identity",
+      "runtime": "Go 1.22",
+      "dependencies": [
+        "postgres-identity",
+        "redis-cache",
+        "sso.internal"
+      ],
+      "slo_p95_ms": 250,
+      "slo_error_rate_pct": 0.2,
+      "description": "Session issuance, token validation, OIDC federation.",
+      "primary_oncall": "marcus"
+    },
+    {
+      "name": "search-service",
+      "team": "Discovery",
+      "runtime": "Java 21",
+      "dependencies": [
+        "elasticsearch",
+        "kafka"
+      ],
+      "slo_p95_ms": 600,
+      "slo_error_rate_pct": 1.0,
+      "description": "Product search and ranking API.",
+      "primary_oncall": "alice"
+    },
+    {
+      "name": "payments-service",
+      "team": "Payments & Checkout",
+      "runtime": "Python 3.11 / FastAPI",
+      "dependencies": [
+        "orders-db",
+        "payments-gateway",
+        "kafka"
+      ],
+      "slo_p95_ms": 800,
+      "slo_error_rate_pct": 0.5,
+      "description": "Charges, refunds and gateway reconciliation.",
+      "primary_oncall": "dana"
+    },
+    {
+      "name": "orders-db",
+      "team": "Data Platform",
+      "runtime": "PostgreSQL 16",
+      "dependencies": [
+        "s3-backups"
+      ],
+      "slo_p95_ms": 120,
+      "slo_error_rate_pct": 0.1,
+      "description": "Primary orders database (primary + one replica).",
+      "primary_oncall": "ravi"
+    }
+  ]
+}

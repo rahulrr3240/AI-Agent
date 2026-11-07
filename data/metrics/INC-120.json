@@ -1,0 +1,104 @@
+{
+  "incident_id": "INC-120",
+  "service": "auth-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 2146,
+    "peak_error_rate_pct": 18.29,
+    "service": "auth-service",
+    "family": "signing_key_rotation"
+  },
+  "series": [
+    {
+      "t": "2026-11-06T06:35:00Z",
+      "p95_latency_ms": 260,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 31.9,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:36:00Z",
+      "p95_latency_ms": 220,
+      "error_rate_pct": 0.26,
+      "cpu_pct": 33.3,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:37:00Z",
+      "p95_latency_ms": 264,
+      "error_rate_pct": 0.38,
+      "cpu_pct": 31.5,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:38:00Z",
+      "p95_latency_ms": 238,
+      "error_rate_pct": 0.29,
+      "cpu_pct": 30.0,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:39:00Z",
+      "p95_latency_ms": 244,
+      "error_rate_pct": 0.29,
+      "cpu_pct": 28.2,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:40:00Z",
+      "p95_latency_ms": 245,
+      "error_rate_pct": 0.25,
+      "cpu_pct": 29.8,
+      "auth_401s": 0
+    },
+    {
+      "t": "2026-11-06T06:41:00Z",
+      "p95_latency_ms": 1770,
+      "error_rate_pct": 14.63,
+      "cpu_pct": 74.3,
+      "auth_401s": 404
+    },
+    {
+      "t": "2026-11-06T06:42:00Z",
+      "p95_latency_ms": 2146,
+      "error_rate_pct": 18.29,
+      "cpu_pct": 88.9,
+      "auth_401s": 475
+    },
+    {
+      "t": "2026-11-06T06:43:00Z",
+      "p95_latency_ms": 1760,
+      "error_rate_pct": 14.74,
+      "cpu_pct": 75.8,
+      "auth_401s": 329
+    },
+    {
+      "t": "2026-11-06T06:44:00Z",
+      "p95_latency_ms": 1398,
+      "error_rate_pct": 11.05,
+      "cpu_pct": 62.6,
+      "auth_401s": 351
+    },
+    {
+      "t": "2026-11-06T06:45:00Z",
+      "p95_latency_ms": 1013,
+      "error_rate_pct": 7.56,
+      "cpu_pct": 53.4,
+      "auth_401s": 246
+    },
+    {
+      "t": "2026-11-06T06:46:00Z",
+      "p95_latency_ms": 638,
+      "error_rate_pct": 3.97,
+      "cpu_pct": 42.8,
+      "auth_401s": 91
+    },
+    {
+      "t": "2026-11-06T06:47:00Z",
+      "p95_latency_ms": 234,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 31.9,
+      "auth_401s": 0
+    }
+  ]
+}

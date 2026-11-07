@@ -1,0 +1,6 @@
+# simulated log extract — INC-115 — auth-service (Go 1.22)
+# window: 2026-11-06T00:00:00Z .. 2026-11-06T00:09:00Z
+time=2026-11-06T00:02:12Z level=error service=auth-service msg="upstream handshake failed: x509: certificate has expired or is not yet valid: certificate for sso.internal expired at 2026-11-05T20:00:00Z"
+time=2026-11-06T00:02:54Z level=warn service=auth-service msg="tls: failed to verify certificate: x509: certificate has expired (sso.internal)"
+time=2026-11-06T00:04:00Z level=error service=auth-service msg="oidc discovery failed: Get https://sso.internal/.well-known/openid-configuration: tls: failed to verify certificate: x509: certificate has expired"
+time=2026-11-06T00:05:24Z level=error service=auth-service msg="token exchange aborted: upstream TLS validation error"

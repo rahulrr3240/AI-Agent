@@ -1,0 +1,138 @@
+{
+  "families": {
+    "redis_pool_exhaustion": {
+      "label": "Redis connection pool exhaustion after deploy",
+      "signature": "ConnectionPoolTimeoutError",
+      "keywords": [
+        "connectionpooltimeouterror",
+        "redis pool",
+        "waiting for connection from pool",
+        "redis"
+      ],
+      "common_fixes": [
+        "rollback_deploy_and_increase_pool",
+        "increase_pool_size",
+        "rollback_deploy"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "rollback_deploy",
+        "scale_up"
+      ]
+    },
+    "memory_leak": {
+      "label": "Memory leak in a new release",
+      "signature": "OOMKilled",
+      "keywords": [
+        "oomkilled",
+        "rss_growth",
+        "memory limit",
+        "memory climbing",
+        "exceeded its memory limit"
+      ],
+      "common_fixes": [
+        "rollback_deploy"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "scale_up",
+        "rollback_deploy"
+      ]
+    },
+    "expired_tls_cert": {
+      "label": "Expired TLS certificate",
+      "signature": "certificate has expired",
+      "keywords": [
+        "certificate has expired",
+        "x509",
+        "certificate verify failed",
+        "tls handshake",
+        "failed to verify certificate"
+      ],
+      "common_fixes": [
+        "renew_certificate"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "rollback_deploy",
+        "scale_up"
+      ]
+    },
+    "slow_query_migration": {
+      "label": "Slow query after a DB migration",
+      "signature": "canceling statement due to lock timeout",
+      "keywords": [
+        "canceling statement due to lock timeout",
+        "lock timeout",
+        "seq scan",
+        "slow query",
+        "applied migration"
+      ],
+      "common_fixes": [
+        "add_db_index"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "scale_up",
+        "rollback_deploy"
+      ]
+    },
+    "payments_rate_limit": {
+      "label": "Third-party API rate limiting",
+      "signature": "429 Too Many Requests",
+      "keywords": [
+        "429 too many requests",
+        "429",
+        "retry-after",
+        "rate_limit_remaining",
+        "retry storm"
+      ],
+      "common_fixes": [
+        "enable_backoff_circuit_breaker"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "scale_up",
+        "rollback_deploy"
+      ]
+    },
+    "kafka_consumer_lag": {
+      "label": "Kafka consumer lag (no history)",
+      "signature": "consumer group lag",
+      "keywords": [
+        "consumer group lag",
+        "consumer lag",
+        "kafka",
+        "poll timeout",
+        "rebalance"
+      ],
+      "common_fixes": [
+        "scale_up"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "scale_up",
+        "clear_cache"
+      ]
+    },
+    "signing_key_rotation": {
+      "label": "Signing-key rotation broke token validation (no history)",
+      "signature": "invalid_client",
+      "keywords": [
+        "invalid_client",
+        "signing key",
+        "jwks",
+        "jwt verify",
+        "unknown kid"
+      ],
+      "common_fixes": [
+        "rollback_secret_rotation"
+      ],
+      "generic_fixes": [
+        "restart_service",
+        "rollback_deploy",
+        "clear_cache"
+      ]
+    }
+  }
+}

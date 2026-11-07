@@ -1,0 +1,9 @@
+# simulated log extract — INC-024 — checkout-service (Node.js 20)
+# window: 2026-09-03T02:07:00Z .. 2026-09-03T02:16:00Z
+2026-09-03T02:07:36.000Z INFO  checkout-service starting checkout-service version v2.40.0 (commit 9c9bc50)
+2026-09-03T02:07:54.000Z INFO  checkout-service redis pool initialised size=25 min_idle=2 timeout=2000ms
+2026-09-03T02:10:36.000Z WARN  checkout-service redis pool exhausted active=25 idle=0 waiting=27
+2026-09-03T02:11:18.000Z ERROR checkout-service ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)
+2026-09-03T02:11:48.000Z ERROR checkout-service GET /api/checkout 504 4123ms request_id=req_17106
+2026-09-03T02:12:54.000Z ERROR checkout-service ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)
+2026-09-03T02:14:24.000Z WARN  checkout-service redis pool saturated: cmd=GET key=cart:{session} queue_depth=41

@@ -1,0 +1,7 @@
+# simulated log extract — INC-015 — checkout-service (Node.js 20)
+# window: 2026-06-11T15:33:00Z .. 2026-06-11T15:42:00Z
+2026-06-11T15:34:06.000Z INFO  checkout-service applied migration-0058 (0058_orders_promo_code); backfill complete
+2026-06-11T15:36:24.000Z WARN  checkout-service db query slow: 5127ms (threshold 500ms) query=orders.by_customer
+2026-06-11T15:37:00.000Z ERROR checkout-service db error: canceling statement due to lock timeout (SQLSTATE 55P03)
+2026-06-11T15:38:06.000Z ERROR checkout-service upstream orders-db request failed after 5000ms: lock timeout
+2026-06-11T15:40:18.000Z WARN  checkout-service connection pool waiting=18 active=20

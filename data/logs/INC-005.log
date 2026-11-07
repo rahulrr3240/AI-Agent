@@ -1,0 +1,8 @@
+# simulated log extract — INC-005 — auth-service (Go 1.22)
+# window: 2026-03-19T09:34:00Z .. 2026-03-19T09:43:00Z
+time=2026-03-19T09:34:36Z level=info service=auth-service msg="starting auth-service version v4.2.0 (commit 4193fea)"
+time=2026-03-19T09:34:54Z level=info service=auth-service msg="redis pool initialised size=30 min_idle=2 timeout=2000ms"
+time=2026-03-19T09:37:36Z level=warn service=auth-service msg="redis pool exhausted active=30 idle=0 waiting=16"
+time=2026-03-19T09:38:18Z level=error service=auth-service msg="ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)"
+time=2026-03-19T09:39:00Z level=error service=auth-service msg="redis: ConnectionPoolTimeoutError: timeout waiting for connection from pool pool_size=30"
+time=2026-03-19T09:40:06Z level=error service=auth-service msg="POST /v1/session/refresh 503 latency=2.001s trace=bc6153e"

@@ -1,0 +1,9 @@
+# simulated log extract — INC-007 — payments-service (Python 3.11 / FastAPI)
+# window: 2026-03-27T06:45:00Z .. 2026-03-27T06:54:00Z
+2026-03-27 06:45:36,000 INFO    [payments-service] starting payments-service version v2.0.0 (commit a2d2f8d)
+2026-03-27 06:46:24,000 WARN    [payments-service] container memory 1413MiB / limit 1536MiB rss_growth=+55MiB/min
+2026-03-27 06:47:48,000 ERROR   [payments-service] kubelet: container payments-service restarted: OOMKilled (exit code 137)
+2026-03-27 06:48:42,000 INFO    [payments-service] probe /healthz ok after restart; memory now 537MiB
+2026-03-27 06:50:12,000 WARN    [payments-service] memory climbing again: 1198MiB rss_growth=+55MiB/min
+2026-03-27 06:51:18,000 ERROR   [payments-service] OOMKilled: container exceeded its memory limit
+2026-03-27 06:52:54,000 ERROR   [payments-service] kubelet: BackOff restarting container payments-service

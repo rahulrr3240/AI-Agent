@@ -1,0 +1,9 @@
+# simulated log extract — INC-117 — checkout-service (Node.js 20)
+# window: 2026-11-06T04:04:00Z .. 2026-11-06T04:13:00Z
+2026-11-06T04:04:36.000Z INFO  checkout-service starting checkout-service version v2.47.0 (commit 17522a4)
+2026-11-06T04:05:24.000Z WARN  checkout-service container memory 1884MiB / limit 2048MiB rss_growth=+69MiB/min
+2026-11-06T04:06:48.000Z ERROR checkout-service kubelet: container checkout-service restarted: OOMKilled (exit code 137)
+2026-11-06T04:07:42.000Z INFO  checkout-service probe /healthz ok after restart; memory now 716MiB
+2026-11-06T04:09:12.000Z WARN  checkout-service memory climbing again: 1597MiB rss_growth=+69MiB/min
+2026-11-06T04:10:18.000Z ERROR checkout-service OOMKilled: container exceeded its memory limit
+2026-11-06T04:11:54.000Z ERROR checkout-service kubelet: BackOff restarting container checkout-service

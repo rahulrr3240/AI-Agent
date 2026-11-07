@@ -1,0 +1,484 @@
+{
+  "deploys": [
+    {
+      "id": "DEP-0001",
+      "service": "checkout-service",
+      "version": "v2.18.0",
+      "deployed_at": "2026-03-04T01:29:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 100 to 40 connections",
+      "commit": "bad34ef",
+      "previous_version": "v2.17.4"
+    },
+    {
+      "id": "DEP-0002",
+      "service": "search-service",
+      "version": "v5.2.0",
+      "deployed_at": "2026-03-08T10:20:00Z",
+      "deployed_by": "alice",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "8ab5172",
+      "previous_version": "v5.1.7"
+    },
+    {
+      "id": "DEP-0003",
+      "service": "checkout-service",
+      "version": "v2.19.0",
+      "deployed_at": "2026-03-11T15:20:00Z",
+      "deployed_by": "priya",
+      "summary": "Tighten cart validation error codes",
+      "commit": "9c1e4a2",
+      "previous_version": "v2.18.3"
+    },
+    {
+      "id": "DEP-0004",
+      "service": "orders-db",
+      "version": "migration-0042",
+      "deployed_at": "2026-03-12T12:37:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0042_add_orders_region: add column and backfill orders",
+      "commit": "68503f6",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0005",
+      "service": "auth-service",
+      "version": "v4.2.0",
+      "deployed_at": "2026-03-19T08:56:00Z",
+      "deployed_by": "marcus",
+      "summary": "Reduce Redis pool default from 80 to 30 connections",
+      "commit": "4193fea",
+      "previous_version": "v4.1.6"
+    },
+    {
+      "id": "DEP-0006",
+      "service": "payments-service",
+      "version": "v2.0.0",
+      "deployed_at": "2026-03-27T06:07:00Z",
+      "deployed_by": "dana",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "a2d2f8d",
+      "previous_version": "v1.9.8"
+    },
+    {
+      "id": "DEP-0007",
+      "service": "auth-service",
+      "version": "v4.3.0",
+      "deployed_at": "2026-04-02T12:10:00Z",
+      "deployed_by": "marcus",
+      "summary": "Add PKCE support to OIDC client",
+      "commit": "c3ea118",
+      "previous_version": "v4.2.4"
+    },
+    {
+      "id": "DEP-0008",
+      "service": "payments-service",
+      "version": "v2.1.0",
+      "deployed_at": "2026-04-05T11:55:00Z",
+      "deployed_by": "dana",
+      "summary": "Add idempotency key to refunds",
+      "commit": "f40cc21",
+      "previous_version": "v2.0.6"
+    },
+    {
+      "id": "DEP-0009",
+      "service": "search-service",
+      "version": "v5.10.1",
+      "deployed_at": "2026-04-09T09:31:00Z",
+      "deployed_by": "alice",
+      "summary": "Re-rank: lower synonym weight",
+      "commit": "8ab144f",
+      "previous_version": "v5.10.0"
+    },
+    {
+      "id": "DEP-0010",
+      "service": "orders-db",
+      "version": "migration-0051",
+      "deployed_at": "2026-04-17T09:19:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0051_add_orders_channel: add column and backfill orders",
+      "commit": "f6d4da9",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0011",
+      "service": "checkout-service",
+      "version": "v2.25.1",
+      "deployed_at": "2026-05-06T20:28:00Z",
+      "deployed_by": "priya",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "ee23d36",
+      "previous_version": "v2.24.9"
+    },
+    {
+      "id": "DEP-0012",
+      "service": "checkout-service",
+      "version": "v2.31.0",
+      "deployed_at": "2026-06-02T02:52:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 50 to 20 connections",
+      "commit": "ef0aa1e",
+      "previous_version": "v2.30.2"
+    },
+    {
+      "id": "DEP-0013",
+      "service": "orders-db",
+      "version": "migration-0058",
+      "deployed_at": "2026-06-11T14:55:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0058_orders_promo_code: add column and backfill orders",
+      "commit": "2579f48",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0014",
+      "service": "checkout-service",
+      "version": "v2.32.0",
+      "deployed_at": "2026-06-15T10:05:00Z",
+      "deployed_by": "priya",
+      "summary": "Add gift-message field to cart",
+      "commit": "b77d310",
+      "previous_version": "v2.31.7"
+    },
+    {
+      "id": "DEP-0015",
+      "service": "search-service",
+      "version": "v5.9.0",
+      "deployed_at": "2026-07-02T07:44:00Z",
+      "deployed_by": "alice",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "ef7853d",
+      "previous_version": "v5.8.4"
+    },
+    {
+      "id": "DEP-0016",
+      "service": "payments-service",
+      "version": "v2.10.0",
+      "deployed_at": "2026-07-08T16:14:00Z",
+      "deployed_by": "dana",
+      "summary": "Gateway client: reuse HTTP connection pool",
+      "commit": "b2d7710",
+      "previous_version": "v2.9.4"
+    },
+    {
+      "id": "DEP-0017",
+      "service": "orders-db",
+      "version": "migration-0063",
+      "deployed_at": "2026-07-15T01:12:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0063_orders_fulfilment_state: add column and backfill orders",
+      "commit": "ef73eb2",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0018",
+      "service": "auth-service",
+      "version": "v4.7.0",
+      "deployed_at": "2026-07-21T18:22:00Z",
+      "deployed_by": "marcus",
+      "summary": "Session store: switch to pipelined writes",
+      "commit": "1a9f6b3",
+      "previous_version": "v4.6.2"
+    },
+    {
+      "id": "DEP-0019",
+      "service": "auth-service",
+      "version": "v4.7.1",
+      "deployed_at": "2026-07-23T13:33:00Z",
+      "deployed_by": "marcus",
+      "summary": "Reduce Redis pool default from 80 to 25 connections",
+      "commit": "2c1f76f",
+      "previous_version": "v4.7.0"
+    },
+    {
+      "id": "DEP-0020",
+      "service": "search-service",
+      "version": "v6.1.0",
+      "deployed_at": "2026-08-14T18:59:00Z",
+      "deployed_by": "alice",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "ae77971",
+      "previous_version": "v6.0.3"
+    },
+    {
+      "id": "DEP-0021",
+      "service": "orders-db",
+      "version": "migration-0069",
+      "deployed_at": "2026-08-21T11:48:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0069_orders_settlement_id: add column and backfill orders",
+      "commit": "7aa549e",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0022",
+      "service": "search-service",
+      "version": "v6.2.0",
+      "deployed_at": "2026-08-25T13:03:00Z",
+      "deployed_by": "alice",
+      "summary": "Index product facets as keyword fields",
+      "commit": "0c71d5e",
+      "previous_version": "v6.1.4"
+    },
+    {
+      "id": "DEP-0023",
+      "service": "checkout-service",
+      "version": "v2.40.0",
+      "deployed_at": "2026-09-03T01:29:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 60 to 25 connections",
+      "commit": "9c9bc50",
+      "previous_version": "v2.39.3"
+    },
+    {
+      "id": "DEP-0024",
+      "service": "checkout-service",
+      "version": "v2.41.0",
+      "deployed_at": "2026-09-10T14:30:00Z",
+      "deployed_by": "priya",
+      "summary": "Retry idempotency keys on 5xx",
+      "commit": "4f2ab8e",
+      "previous_version": "v2.40.3"
+    },
+    {
+      "id": "DEP-0025",
+      "service": "orders-db",
+      "version": "migration-0074",
+      "deployed_at": "2026-09-12T04:34:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0074_orders_refund_state: add column and backfill orders",
+      "commit": "ddfc409",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0026",
+      "service": "payments-service",
+      "version": "v2.14.0",
+      "deployed_at": "2026-09-24T03:21:00Z",
+      "deployed_by": "dana",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "7bc4976",
+      "previous_version": "v2.13.6"
+    },
+    {
+      "id": "DEP-0027",
+      "service": "payments-service",
+      "version": "v2.17.0",
+      "deployed_at": "2026-10-08T07:48:00Z",
+      "deployed_by": "dana",
+      "summary": "Settlement reconciliation job",
+      "commit": "91ce6d3",
+      "previous_version": "v2.16.2"
+    },
+    {
+      "id": "DEP-0028",
+      "service": "orders-db",
+      "version": "migration-0077",
+      "deployed_at": "2026-10-11T02:00:00Z",
+      "deployed_by": "ravi",
+      "summary": "Add orders.promo_source column",
+      "commit": "d00a117",
+      "previous_version": "migration-0076"
+    },
+    {
+      "id": "DEP-0029",
+      "service": "checkout-service",
+      "version": "v2.44.0",
+      "deployed_at": "2026-10-19T09:12:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis client keepalive to 30s",
+      "commit": "e91c0f7",
+      "previous_version": "v2.43.6"
+    },
+    {
+      "id": "DEP-0030",
+      "service": "checkout-service",
+      "version": "v2.44.1",
+      "deployed_at": "2026-10-20T01:24:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 60 to 20 connections",
+      "commit": "d9e8ae2",
+      "previous_version": "v2.44.0"
+    },
+    {
+      "id": "DEP-0031",
+      "service": "checkout-service",
+      "version": "v2.44.2",
+      "deployed_at": "2026-10-21T11:41:00Z",
+      "deployed_by": "priya",
+      "summary": "Fix nil guard in promo resolver",
+      "commit": "5bd8021",
+      "previous_version": "v2.44.1"
+    },
+    {
+      "id": "DEP-0032",
+      "service": "search-service",
+      "version": "v6.4.0",
+      "deployed_at": "2026-10-22T07:29:00Z",
+      "deployed_by": "priya",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "2e8a8ad",
+      "previous_version": "v6.3.2"
+    },
+    {
+      "id": "DEP-0033",
+      "service": "search-service",
+      "version": "v6.4.1",
+      "deployed_at": "2026-10-23T10:26:00Z",
+      "deployed_by": "alice",
+      "summary": "Bump Lucene to 9.11.1",
+      "commit": "6aa02c4",
+      "previous_version": "v6.4.0"
+    },
+    {
+      "id": "DEP-0034",
+      "service": "search-service",
+      "version": "v6.5.9",
+      "deployed_at": "2026-10-26T08:12:00Z",
+      "deployed_by": "alice",
+      "summary": "Cache embedding model per shard",
+      "commit": "3de9a81",
+      "previous_version": "v6.5.6"
+    },
+    {
+      "id": "DEP-0035",
+      "service": "orders-db",
+      "version": "migration-0079",
+      "deployed_at": "2026-10-26T10:41:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0079_orders_loyalty_tier: add column and backfill orders",
+      "commit": "7c8b7ce",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0036",
+      "service": "orders-db",
+      "version": "migration-0080",
+      "deployed_at": "2026-10-27T02:00:00Z",
+      "deployed_by": "ravi",
+      "summary": "Backfill orders.loyalty_tier",
+      "commit": "fa8210c",
+      "previous_version": "migration-0079"
+    },
+    {
+      "id": "DEP-0037",
+      "service": "auth-service",
+      "version": "v4.9.0",
+      "deployed_at": "2026-10-29T08:47:00Z",
+      "deployed_by": "marcus",
+      "summary": "Rotate OIDC signing key (kid=2026-10-31)",
+      "commit": "d5b2077",
+      "previous_version": "v4.8.1"
+    },
+    {
+      "id": "DEP-0038",
+      "service": "payments-service",
+      "version": "v2.19.0",
+      "deployed_at": "2026-10-29T12:58:00Z",
+      "deployed_by": "dana",
+      "summary": "Upgrade protobuf to 5.28",
+      "commit": "c8a3f52",
+      "previous_version": "v2.18.4"
+    },
+    {
+      "id": "DEP-0039",
+      "service": "payments-service",
+      "version": "v2.19.0",
+      "deployed_at": "2026-11-01T12:59:00Z",
+      "deployed_by": "priya",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "66b0191",
+      "previous_version": "v2.18.4"
+    },
+    {
+      "id": "DEP-0040",
+      "service": "orders-db",
+      "version": "migration-0082",
+      "deployed_at": "2026-11-03T02:43:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0082_orders_gift_message: add column and backfill orders",
+      "commit": "3f4ab70",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0041",
+      "service": "checkout-service",
+      "version": "v2.46.0",
+      "deployed_at": "2026-11-04T01:56:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 60 to 25 connections",
+      "commit": "b03cce6",
+      "previous_version": "v2.45.2"
+    },
+    {
+      "id": "DEP-0042",
+      "service": "search-service",
+      "version": "v6.6.1",
+      "deployed_at": "2026-11-04T08:21:00Z",
+      "deployed_by": "priya",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "7db2ac4",
+      "previous_version": "v6.6.0"
+    },
+    {
+      "id": "DEP-0043",
+      "service": "orders-db",
+      "version": "migration-0084",
+      "deployed_at": "2026-11-04T23:49:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0084_orders_dispute_flag: add column and backfill orders",
+      "commit": "69ef907",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0044",
+      "service": "orders-db",
+      "version": "migration-0085",
+      "deployed_at": "2026-11-05T02:00:00Z",
+      "deployed_by": "ravi",
+      "summary": "Add orders.checkout_session_id",
+      "commit": "0bb19d4",
+      "previous_version": "migration-0084"
+    },
+    {
+      "id": "DEP-0045",
+      "service": "auth-service",
+      "version": "v4.9.1",
+      "deployed_at": "2026-11-05T22:38:00Z",
+      "deployed_by": "marcus",
+      "summary": "Rotate OIDC signing key (kid=2026-11-05)",
+      "commit": "ee4c9a0",
+      "previous_version": "v4.9.0"
+    },
+    {
+      "id": "DEP-0046",
+      "service": "payments-service",
+      "version": "v2.21.0",
+      "deployed_at": "2026-11-06T01:37:00Z",
+      "deployed_by": "priya",
+      "summary": "Reduce Redis pool default from 60 to 20 connections",
+      "commit": "04cfc66",
+      "previous_version": "v2.20.3"
+    },
+    {
+      "id": "DEP-0047",
+      "service": "orders-db",
+      "version": "migration-0087",
+      "deployed_at": "2026-11-06T02:20:00Z",
+      "deployed_by": "ravi",
+      "summary": "Backfill checkout_session_id in batches",
+      "commit": "5e7c230",
+      "previous_version": "migration-0086"
+    },
+    {
+      "id": "DEP-0048",
+      "service": "checkout-service",
+      "version": "v2.47.0",
+      "deployed_at": "2026-11-06T03:26:00Z",
+      "deployed_by": "priya",
+      "summary": "Rewrite response serialisation path; add in-memory response cache",
+      "commit": "17522a4",
+      "previous_version": "v2.46.1"
+    }
+  ]
+}

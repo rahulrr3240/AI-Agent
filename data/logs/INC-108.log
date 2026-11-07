@@ -1,0 +1,6 @@
+# simulated log extract — INC-108 — checkout-service (Node.js 20)
+# window: 2026-11-02T01:10:00Z .. 2026-11-02T01:19:00Z
+2026-11-02T01:12:12.000Z ERROR checkout-service upstream handshake failed: x509: certificate has expired or is not yet valid: certificate for api.payments-gateway.com expired at 2026-11-01T06:00:00Z
+2026-11-02T01:12:54.000Z WARN  checkout-service tls: failed to verify certificate: x509: certificate has expired (api.payments-gateway.com)
+2026-11-02T01:13:48.000Z ERROR checkout-service POST https://api.payments-gateway.com/v1/charges failed: certificate has expired code=DEPTH_ZERO_SELF_SIGNED_CERT
+2026-11-02T01:15:36.000Z ERROR checkout-service circuit breaker opened for payments-gateway after 23 failures

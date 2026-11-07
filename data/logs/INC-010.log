@@ -1,0 +1,10 @@
+# simulated log extract — INC-010 — orders-db (PostgreSQL 16)
+# window: 2026-04-17T09:57:00Z .. 2026-04-17T10:06:00Z
+2026-04-17 09:58:06.000 UTC [15141] INFO:  applied migration-0051 (0051_add_orders_channel); backfill complete
+2026-04-17 09:59:24.000 UTC [14692] LOG:  duration: 8421.331 ms  statement: SELECT id, status, total FROM orders WHERE status = $1 ORDER BY created_at DESC LIMIT 20
+2026-04-17 10:00:06.000 UTC [19919] LOG:  process 18845 still waiting for ShareLock on transaction 87759 after 1000.219 ms
+2026-04-17 10:00:54.000 UTC [19932] ERROR:  canceling statement due to lock timeout
+2026-04-17 10:01:06.000 UTC [16913] STATEMENT:  UPDATE orders SET status = 'paid', updated_at = now() WHERE id = $1
+2026-04-17 10:02:18.000 UTC [19498] LOG:  duration: 9012.774 ms  statement: SELECT count(*) FROM orders WHERE status = 'pending'
+2026-04-17 10:02:48.000 UTC [16591] ERROR:  canceling statement due to lock timeout
+2026-04-17 10:04:36.000 UTC [18517] LOG:  checkpoint starting: time=0.4s

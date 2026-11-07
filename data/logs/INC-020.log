@@ -1,0 +1,6 @@
+# simulated log extract — INC-020 — payments-service (Python 3.11 / FastAPI)
+# window: 2026-08-03T03:41:00Z .. 2026-08-03T03:50:00Z
+2026-08-03 03:43:12,000 ERROR   [payments-service] upstream handshake failed: x509: certificate has expired or is not yet valid: certificate for api.payments-gateway.com expired at 2026-08-02T12:00:00Z
+2026-08-03 03:43:54,000 WARN    [payments-service] tls: failed to verify certificate: x509: certificate has expired (api.payments-gateway.com)
+2026-08-03 03:44:36,000 ERROR   [payments-service] SSLError: certificate verify failed: certificate has expired (_ssl.c:1006) host=api.payments-gateway.com
+2026-08-03 03:46:48,000 ERROR   [payments-service] gateway request aborted: TLS handshake failure

@@ -1,0 +1,541 @@
+{
+  "incidents": [
+    {
+      "id": "INC-101",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-10-20T02:09:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0030",
+      "log_file": "data/logs/INC-101.log",
+      "metrics_file": "data/metrics/INC-101.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ],
+      "true_fix": "rollback_deploy_and_increase_pool",
+      "novel": false
+    },
+    {
+      "id": "INC-102",
+      "family": "memory_leak",
+      "service": "search-service",
+      "opened_at": "2026-10-22T08:14:00Z",
+      "alert": "search-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on search-service"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0032",
+      "log_file": "data/logs/INC-102.log",
+      "metrics_file": "data/metrics/INC-102.json",
+      "tags": [
+        "memory_leak",
+        "search-service"
+      ],
+      "true_fix": "rollback_deploy",
+      "novel": false
+    },
+    {
+      "id": "INC-103",
+      "family": "expired_tls_cert",
+      "service": "payments-service",
+      "opened_at": "2026-10-24T04:52:00Z",
+      "alert": "payments-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-103.log",
+      "metrics_file": "data/metrics/INC-103.json",
+      "tags": [
+        "expired_tls_cert",
+        "payments-service"
+      ],
+      "true_fix": "renew_certificate",
+      "novel": false
+    },
+    {
+      "id": "INC-104",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-10-26T11:26:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0035",
+      "log_file": "data/logs/INC-104.log",
+      "metrics_file": "data/metrics/INC-104.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ],
+      "true_fix": "add_db_index",
+      "novel": false
+    },
+    {
+      "id": "INC-105",
+      "family": "payments_rate_limit",
+      "service": "payments-service",
+      "opened_at": "2026-10-28T19:38:00Z",
+      "alert": "payments-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-105.log",
+      "metrics_file": "data/metrics/INC-105.json",
+      "tags": [
+        "payments_rate_limit",
+        "payments-service"
+      ],
+      "true_fix": "enable_backoff_circuit_breaker",
+      "novel": false
+    },
+    {
+      "id": "INC-106",
+      "family": "redis_pool_exhaustion",
+      "service": "auth-service",
+      "opened_at": "2026-10-30T06:03:00Z",
+      "alert": "auth-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 2.8s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-106.log",
+      "metrics_file": "data/metrics/INC-106.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "auth-service"
+      ],
+      "true_fix": "increase_pool_size",
+      "novel": false
+    },
+    {
+      "id": "INC-107",
+      "family": "memory_leak",
+      "service": "payments-service",
+      "opened_at": "2026-11-01T13:44:00Z",
+      "alert": "payments-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on payments-service"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0039",
+      "log_file": "data/logs/INC-107.log",
+      "metrics_file": "data/metrics/INC-107.json",
+      "tags": [
+        "memory_leak",
+        "payments-service"
+      ],
+      "true_fix": "rollback_deploy",
+      "novel": false
+    },
+    {
+      "id": "INC-108",
+      "family": "expired_tls_cert",
+      "service": "checkout-service",
+      "opened_at": "2026-11-02T01:17:00Z",
+      "alert": "checkout-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-108.log",
+      "metrics_file": "data/metrics/INC-108.json",
+      "tags": [
+        "expired_tls_cert",
+        "checkout-service"
+      ],
+      "true_fix": "renew_certificate",
+      "novel": false
+    },
+    {
+      "id": "INC-109",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-11-03T03:28:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0040",
+      "log_file": "data/logs/INC-109.log",
+      "metrics_file": "data/metrics/INC-109.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ],
+      "true_fix": "add_db_index",
+      "novel": false
+    },
+    {
+      "id": "INC-110",
+      "family": "payments_rate_limit",
+      "service": "checkout-service",
+      "opened_at": "2026-11-03T15:52:00Z",
+      "alert": "checkout-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-110.log",
+      "metrics_file": "data/metrics/INC-110.json",
+      "tags": [
+        "payments_rate_limit",
+        "checkout-service"
+      ],
+      "true_fix": "enable_backoff_circuit_breaker",
+      "novel": false
+    },
+    {
+      "id": "INC-111",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-11-04T02:41:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0041",
+      "log_file": "data/logs/INC-111.log",
+      "metrics_file": "data/metrics/INC-111.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ],
+      "true_fix": "rollback_deploy_and_increase_pool",
+      "novel": false
+    },
+    {
+      "id": "INC-112",
+      "family": "memory_leak",
+      "service": "search-service",
+      "opened_at": "2026-11-04T09:06:00Z",
+      "alert": "search-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on search-service"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0042",
+      "log_file": "data/logs/INC-112.log",
+      "metrics_file": "data/metrics/INC-112.json",
+      "tags": [
+        "memory_leak",
+        "search-service"
+      ],
+      "true_fix": "rollback_deploy",
+      "novel": false
+    },
+    {
+      "id": "INC-113",
+      "family": "slow_query_migration",
+      "service": "payments-service",
+      "opened_at": "2026-11-05T00:34:00Z",
+      "alert": "payments-service query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0043",
+      "log_file": "data/logs/INC-113.log",
+      "metrics_file": "data/metrics/INC-113.json",
+      "tags": [
+        "slow_query_migration",
+        "payments-service"
+      ],
+      "true_fix": "add_db_index",
+      "novel": false
+    },
+    {
+      "id": "INC-114",
+      "family": "payments_rate_limit",
+      "service": "payments-service",
+      "opened_at": "2026-11-05T12:19:00Z",
+      "alert": "payments-service error rate > 5% \u2014 HTTP 429 from payments-gateway",
+      "symptoms": [
+        "HTTP 429 from payments-gateway",
+        "retry storm, no jitter",
+        "charge failures"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-114.log",
+      "metrics_file": "data/metrics/INC-114.json",
+      "tags": [
+        "payments_rate_limit",
+        "payments-service"
+      ],
+      "true_fix": "enable_backoff_circuit_breaker",
+      "novel": false
+    },
+    {
+      "id": "INC-115",
+      "family": "expired_tls_cert",
+      "service": "auth-service",
+      "opened_at": "2026-11-06T00:07:00Z",
+      "alert": "auth-service upstream error rate > 10% \u2014 TLS handshake failures",
+      "symptoms": [
+        "upstream TLS handshake failures",
+        "x509 certificate has expired",
+        "error rate above SLO for 5m"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-115.log",
+      "metrics_file": "data/metrics/INC-115.json",
+      "tags": [
+        "expired_tls_cert",
+        "auth-service"
+      ],
+      "true_fix": "renew_certificate",
+      "novel": false
+    },
+    {
+      "id": "INC-116",
+      "family": "redis_pool_exhaustion",
+      "service": "payments-service",
+      "opened_at": "2026-11-06T02:22:00Z",
+      "alert": "payments-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 3.9s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0046",
+      "log_file": "data/logs/INC-116.log",
+      "metrics_file": "data/metrics/INC-116.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "payments-service"
+      ],
+      "true_fix": "rollback_deploy_and_increase_pool",
+      "novel": false
+    },
+    {
+      "id": "INC-117",
+      "family": "memory_leak",
+      "service": "checkout-service",
+      "opened_at": "2026-11-06T04:11:00Z",
+      "alert": "checkout-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on checkout-service"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0048",
+      "log_file": "data/logs/INC-117.log",
+      "metrics_file": "data/metrics/INC-117.json",
+      "tags": [
+        "memory_leak",
+        "checkout-service"
+      ],
+      "true_fix": "rollback_deploy",
+      "novel": false
+    },
+    {
+      "id": "INC-119",
+      "family": "kafka_consumer_lag",
+      "service": "search-service",
+      "opened_at": "2026-11-06T06:02:00Z",
+      "alert": "search-service consumer lag > 100k messages for 10m",
+      "symptoms": [
+        "consumer group lag 184320",
+        "index freshness SLO breached"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-119.log",
+      "metrics_file": "data/metrics/INC-119.json",
+      "tags": [
+        "kafka_consumer_lag",
+        "search-service"
+      ],
+      "true_fix": "scale_up",
+      "novel": true
+    },
+    {
+      "id": "INC-120",
+      "family": "signing_key_rotation",
+      "service": "auth-service",
+      "opened_at": "2026-11-06T06:41:00Z",
+      "alert": "auth-service 401 rate > 25% for 5m",
+      "symptoms": [
+        "62% of token validations return 401",
+        "invalid_client from OIDC verifier"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-120.log",
+      "metrics_file": "data/metrics/INC-120.json",
+      "tags": [
+        "signing_key_rotation",
+        "auth-service"
+      ],
+      "true_fix": "rollback_secret_rotation",
+      "novel": true
+    },
+    {
+      "id": "INC-121",
+      "family": "kafka_consumer_lag",
+      "service": "search-service",
+      "opened_at": "2026-11-06T07:14:00Z",
+      "alert": "search-service consumer lag > 100k messages for 10m",
+      "symptoms": [
+        "consumer group lag 221880",
+        "index freshness SLO breached"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": null,
+      "log_file": "data/logs/INC-121.log",
+      "metrics_file": "data/metrics/INC-121.json",
+      "tags": [
+        "kafka_consumer_lag",
+        "search-service"
+      ],
+      "true_fix": "scale_up",
+      "novel": false
+    }
+  ]
+}

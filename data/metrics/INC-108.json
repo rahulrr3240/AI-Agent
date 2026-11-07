@@ -1,0 +1,104 @@
+{
+  "incident_id": "INC-108",
+  "service": "checkout-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 3442,
+    "peak_error_rate_pct": 18.27,
+    "service": "checkout-service",
+    "family": "expired_tls_cert"
+  },
+  "series": [
+    {
+      "t": "2026-11-02T01:11:00Z",
+      "p95_latency_ms": 369,
+      "error_rate_pct": 0.31,
+      "cpu_pct": 28.8,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:12:00Z",
+      "p95_latency_ms": 368,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 30.2,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:13:00Z",
+      "p95_latency_ms": 401,
+      "error_rate_pct": 0.27,
+      "cpu_pct": 29.1,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:14:00Z",
+      "p95_latency_ms": 371,
+      "error_rate_pct": 0.23,
+      "cpu_pct": 32.2,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:15:00Z",
+      "p95_latency_ms": 394,
+      "error_rate_pct": 0.37,
+      "cpu_pct": 28.2,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:16:00Z",
+      "p95_latency_ms": 394,
+      "error_rate_pct": 0.37,
+      "cpu_pct": 32.6,
+      "upstream_tls_failures": 0
+    },
+    {
+      "t": "2026-11-02T01:17:00Z",
+      "p95_latency_ms": 2830,
+      "error_rate_pct": 14.6,
+      "cpu_pct": 77.0,
+      "upstream_tls_failures": 36
+    },
+    {
+      "t": "2026-11-02T01:18:00Z",
+      "p95_latency_ms": 3442,
+      "error_rate_pct": 18.27,
+      "cpu_pct": 85.9,
+      "upstream_tls_failures": 72
+    },
+    {
+      "t": "2026-11-02T01:19:00Z",
+      "p95_latency_ms": 2802,
+      "error_rate_pct": 14.78,
+      "cpu_pct": 76.1,
+      "upstream_tls_failures": 36
+    },
+    {
+      "t": "2026-11-02T01:20:00Z",
+      "p95_latency_ms": 2226,
+      "error_rate_pct": 11.05,
+      "cpu_pct": 66.5,
+      "upstream_tls_failures": 49
+    },
+    {
+      "t": "2026-11-02T01:21:00Z",
+      "p95_latency_ms": 1600,
+      "error_rate_pct": 7.52,
+      "cpu_pct": 54.3,
+      "upstream_tls_failures": 16
+    },
+    {
+      "t": "2026-11-02T01:22:00Z",
+      "p95_latency_ms": 988,
+      "error_rate_pct": 3.83,
+      "cpu_pct": 42.4,
+      "upstream_tls_failures": 9
+    },
+    {
+      "t": "2026-11-02T01:23:00Z",
+      "p95_latency_ms": 399,
+      "error_rate_pct": 0.29,
+      "cpu_pct": 33.4,
+      "upstream_tls_failures": 0
+    }
+  ]
+}
