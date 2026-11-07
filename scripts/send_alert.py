@@ -108,7 +108,7 @@ def main() -> int:
     print(json.dumps(result, indent=2))
     ids = ", ".join(a["id"] for a in result.get("alerts", []))
     print(f"\nQueued {result.get('queued')} live alert(s): {ids}")
-    print("Next: streamlit run app.py → Live alert tab.")
+    print("Next: streamlit run app.py -> Live alert tab.")
     return 0
 
 

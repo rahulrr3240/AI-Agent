@@ -15,7 +15,7 @@ DATA_DIR = BASE_DIR / "data"
 REPORTS_DIR = BASE_DIR / "reports"
 
 DEFAULT_MODEL = "openai/gpt-oss-120b"
-DEFAULT_FALLBACK_MODEL = "qwen/qwen3-32b"
+DEFAULT_FALLBACK_MODEL = "openai/gpt-oss-20b"
 HINDSIGHT_CLOUD_URL = "https://api.hindsight.vectorize.io"
 
 

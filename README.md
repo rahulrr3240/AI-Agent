@@ -39,8 +39,8 @@ A triage agent with three properties:
    answer, and never invents incident IDs.
 
 The demo: the same alert with **Memory OFF** ranks `restart_service` first; with
-**Memory ON** it cites five past certificate expiries and ranks
-`renew_certificate` first with `worked 5/5`.
+**Memory ON** it cites four past certificate expiries and ranks
+`renew_certificate` first with `worked 4/4`.
 
 ## Demo
 
@@ -335,7 +335,7 @@ The LLM is the unreliable part, so every path has a fallback:
 | Hindsight unreachable | visible banner + local keyword fallback (labelled "not Hindsight") |
 | Recall fails mid-investigation | continues with memory-OFF behaviour and an error step |
 | Groq invalid JSON / schema | one repair retry with the validation error + schema |
-| Primary model still failing | retry with `qwen/qwen3-32b` |
+| Primary model still failing | retry with `openai/gpt-oss-20b` |
 | 429s | exponential backoff |
 | No key / all attempts fail | deterministic analyst; flagged in UI and CSV |
 | Duplicate outcome click | upsert on a stable document ID |
@@ -404,10 +404,10 @@ Judge-facing items, each with where it lives:
       pattern gate), reflect (service panel), the feedback loop, and the
       live-alert flow that puts real experience into the same bank.
 - [ ] **Per team member — article** — one written piece each, following the
-      official content guide; link it here when published: TODO
+      official content guide; link it here when published.
 - [ ] **Per team member — social post** — one post each per the guide, with the
-      repo and demo links: TODO
-- [ ] **Per team member — video** — one short video each per the guide: TODO
+      repo and demo links.
+- [ ] **Per team member — video** — one short video each per the guide.
 - [ ] **Hindsight Cloud promo credit** — claim it on the account page if the
       submission requires it.
 - [ ] **Benchmark honesty** — re-read the confound note under the learning curve;

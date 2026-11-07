@@ -27,8 +27,8 @@ Turn **Memory ON** off in the right panel. The result card reruns.
 **0:26 — Memory ON.**
 Turn **Memory ON** back on, then click **Run memory OFF vs ON comparison**.
 > "Same alert, same model, same logs — only recall differs. Memory finds the
-> expired certificate in five past incidents. Renewing the certificate moved from
-> nowhere to the first fix, with the exact count: worked 5/5. Restart is demoted
+> expired certificate in four past incidents. Renewing the certificate moved from
+> nowhere to the first fix, with the exact count: worked 4/4. Restart is demoted
 > because memory records it failing every time."
 
 **0:40 — The engineer resolves it.**
@@ -40,7 +40,8 @@ click **Worked** under `renew_certificate`.
 **0:48 — The learning curve.**
 Open the **Learning curve** tab.
 > "This isn't a drawing. Every point is a real run of 20 eval incidents. Memory
-> off is flat near zero top-1 accuracy; seeded memory jumps to the high eighties;
+> off is the weakest line — it ranks a generic restart first and misses more
+> often; with seeded memory the same incidents rank correctly far more often;
 > learning adds the new pattern the agent resolved itself, including a Kafka
 > incident it had never seen. This is memory, not model retraining."
 
