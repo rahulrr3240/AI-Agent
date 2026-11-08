@@ -35,6 +35,7 @@ is re-run and appended to the CSV; this is permitted for conditions A and B only
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import secrets
 import time
@@ -135,8 +136,76 @@ def _run_json_path(reports_dir: Path, run_id: str) -> Path:
     return reports_dir / f"benchmark_{run_id}.json"
 
 
+def migrate_csv(path: Path, *, force: bool = False) -> bool:
+    """Rewrite a run CSV to match ROW_COLUMNS if its header differs or has ragged rows.
+
+    Reads using the csv module so rows with 25 or 26 fields are handled by
+    position against the existing header plus the known trailing retry_of_failed
+    column without altering existing values. Missing boolean columns are filled
+    with False, missing string columns with empty string.
+    Returns True if the file was migrated, False if no change was needed.
+    """
+    if not path.exists() or path.stat().st_size == 0:
+        return False
+
+    with path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        try:
+            raw_rows = list(reader)
+        except Exception:
+            return False
+
+    if not raw_rows:
+        return False
+
+    header = raw_rows[0]
+    needs_migration = (
+        force
+        or header != ROW_COLUMNS
+        or any(len(r) != len(ROW_COLUMNS) for r in raw_rows[1:])
+    )
+    if not needs_migration:
+        return False
+
+    missing_cols = [c for c in ROW_COLUMNS if c not in header]
+    new_rows: list[list[str]] = []
+
+    for row in raw_rows[1:]:
+        row_dict: dict[str, str] = {}
+        for i, col in enumerate(header):
+            if i < len(row):
+                row_dict[col] = row[i]
+            else:
+                row_dict[col] = "False" if col == "retry_of_failed" else ""
+
+        if len(row) > len(header):
+            extra = row[len(header):]
+            for j, extra_val in enumerate(extra):
+                if j < len(missing_cols):
+                    row_dict[missing_cols[j]] = extra_val
+
+        out_row: list[str] = []
+        for col in ROW_COLUMNS:
+            if col in row_dict:
+                val = row_dict[col]
+                if col == "retry_of_failed" and (val is None or val == ""):
+                    val = "False"
+                out_row.append(str(val))
+            else:
+                out_row.append("False" if col == "retry_of_failed" else "")
+        new_rows.append(out_row)
+
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(ROW_COLUMNS)
+        writer.writerows(new_rows)
+
+    return True
+
+
 def _append_row(path: Path, row: dict[str, Any]) -> None:
     """Persist one finished row immediately, so an interrupted run is resumable."""
+    migrate_csv(path)
     frame = pd.DataFrame([row]).reindex(columns=ROW_COLUMNS)
     fresh = not (path.exists() and path.stat().st_size > 0)
     frame.to_csv(path, mode="a", header=fresh, index=False)
@@ -146,6 +215,7 @@ def read_run_rows(path: Path) -> pd.DataFrame:
     """Every row recorded for a run so far (empty frame when there is none yet)."""
     if not path.exists() or path.stat().st_size == 0:
         return pd.DataFrame(columns=ROW_COLUMNS)
+    migrate_csv(path)
     frame = pd.read_csv(path).reindex(columns=ROW_COLUMNS)
     for column in ("llm_answered", "top1_correct", "resolved", "novel", "retry_of_failed"):
         frame[column] = (frame[column].astype(str).str.lower()
