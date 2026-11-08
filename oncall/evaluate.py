@@ -22,11 +22,15 @@ finishes, so one run can be spread across several days.
   python -m oncall.evaluate --reset --bank oncall-eval-manual
   python -m oncall.evaluate --conditions A,B   # subset of A,B,C,D
   python -m oncall.evaluate --resume <run_id>  # continue a run from its own CSV
+  python -m oncall.evaluate --resume <run_id> --retry-failed --conditions A,B # retry failed rows
+  python -m oncall.evaluate --resume <run_id> --retry-failed  # re-run failed rows (A and B only)
 
 With `--no-fallback` a Groq failure is recorded as `llm_failed` and excluded
 from the headline numbers instead of being answered by the deterministic
 heuristic. That matters most for condition A: the heuristic always ranks
 `restart_service` first, so a heuristic row in A is not a model answer at all.
+With `--retry-failed`, any incident whose latest row has `llm_backend == "llm_failed"`
+is re-run and appended to the CSV; this is permitted for conditions A and B only.
 """
 from __future__ import annotations
 
@@ -119,6 +123,7 @@ ROW_COLUMNS = [
     "simulated_minutes", "tried", "no_relevant_history", "no_history_flag_correct",
     "memories_used", "detected_pattern", "memory_backend", "llm_backend", "llm_model",
     "llm_answered", "prompt_tokens", "completion_tokens", "fallback_reason",
+    "retry_of_failed",
 ]
 
 
@@ -142,7 +147,7 @@ def read_run_rows(path: Path) -> pd.DataFrame:
     if not path.exists() or path.stat().st_size == 0:
         return pd.DataFrame(columns=ROW_COLUMNS)
     frame = pd.read_csv(path).reindex(columns=ROW_COLUMNS)
-    for column in ("llm_answered", "top1_correct", "resolved", "novel"):
+    for column in ("llm_answered", "top1_correct", "resolved", "novel", "retry_of_failed"):
         frame[column] = (frame[column].astype(str).str.lower()
                          .isin(("true", "1")).astype(bool))
     return frame
@@ -152,6 +157,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
                   run_id: str, incidents: list[dict], agent_factory=None,
                   pacer: Pacer | None = None, no_fallback: bool = False,
                   done_ids: set[str] | None = None,
+                  retry_ids: set[str] | None = None,
                   on_row: Callable[[dict[str, Any]], None] | None = None
                   ) -> tuple[list[dict[str, Any]], MemoryBackend, str | None]:
     bank = _condition_settings(settings, run_id, condition)
@@ -169,6 +175,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
         allow_fallback=not no_fallback)))(memory)
     rows: list[dict[str, Any]] = []
     last_tokens = 3000          # used to keep pacing honest when a call fails
+    retry_set = retry_ids or set()
 
     def emit(row: dict[str, Any]) -> None:
         rows.append(row)
@@ -180,6 +187,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
             print(f"    {order:02d}/{len(incidents)} {raw['id']}: already recorded — skipped",
                   flush=True)
             continue
+        is_retry = raw["id"] in retry_set
         memory_on = condition != "A_off"
         if pacer:
             pacer.wait(last_tokens)
@@ -199,6 +207,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
                 "llm_backend": "llm_failed", "llm_model": "none", "llm_answered": False,
                 "prompt_tokens": 0, "completion_tokens": 0,
                 "fallback_reason": str(exc)[:300],
+                "retry_of_failed": is_retry,
             })
             print(f"    {order:02d}/{len(incidents)} {raw['id']}: LLM FAILED — row excluded "
                   f"from headline numbers", flush=True)
@@ -247,6 +256,7 @@ def run_condition(settings: Settings, world: SimulatedWorld, condition: str,
             "prompt_tokens": investigation.llm_prompt_tokens,
             "completion_tokens": investigation.llm_completion_tokens,
             "fallback_reason": investigation.fallback_reason or "",
+            "retry_of_failed": is_retry,
         })
         print(f"    {order:02d}/{len(incidents)} {raw['id']}: top={resolution.top_fix} "
               f"{'OK' if resolution.top1_correct else 'miss'} · "
@@ -275,16 +285,21 @@ def summarise(frame: pd.DataFrame) -> dict[str, Any]:
         sub = frame[frame["condition"] == condition]
         if sub.empty:
             continue
-        answered = sub[sub["llm_answered"].astype(bool)] if "llm_answered" in sub else sub
+        latest_sub = sub.drop_duplicates(subset=["incident_id"], keep="last")
+        superseded = sub.loc[~sub.index.isin(latest_sub.index)]
+        retried_count = int((superseded["llm_backend"] == "llm_failed").sum())
+        answered = (latest_sub[latest_sub["llm_answered"].astype(bool)]
+                    if "llm_answered" in latest_sub else latest_sub)
         novel = answered[answered["novel"]]
         has_rows = len(answered) > 0
         summary[condition] = {
-            "incidents": int(len(sub)),
+            "incidents": int(len(latest_sub)),
             "llm_answered": int(len(answered)),
-            "fallback_rows": int(sub["llm_backend"].str.contains("heuristic").sum()),
-            "llm_failed_rows": int((sub["llm_backend"] == "llm_failed").sum()),
+            "fallback_rows": int(latest_sub["llm_backend"].str.contains("heuristic").sum()),
+            "llm_failed_rows": int((latest_sub["llm_backend"] == "llm_failed").sum()),
+            "retried_rows": retried_count,
             "headline_basis": ("rows answered by the LLM only"
-                               if len(answered) != len(sub) else "all rows were LLM-answered"),
+                               if len(answered) != len(latest_sub) else "all rows were LLM-answered"),
             "top1_accuracy": round(float(answered["top1_correct"].mean()), 4) if has_rows else None,
             "resolved_rate": round(float(answered["resolved"].mean()), 4) if has_rows else None,
             "avg_attempts": round(float(answered["attempts_to_resolve"].mean()), 3) if has_rows else None,
@@ -298,7 +313,7 @@ def summarise(frame: pd.DataFrame) -> dict[str, Any]:
             ),
             "avg_prompt_tokens": round(float(answered["prompt_tokens"].mean()), 1)
             if has_rows and "prompt_tokens" in answered else None,
-            "all_rows_top1": round(float(sub["top1_correct"].mean()), 4),
+            "all_rows_top1": round(float(latest_sub["top1_correct"].mean()), 4),
         }
     return summary
 
@@ -312,6 +327,9 @@ def make_chart(frame: pd.DataFrame, path: Path, *, incomplete: bool = False) -> 
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
+    if not frame.empty and "condition" in frame.columns and "incident_id" in frame.columns:
+        frame = frame.drop_duplicates(subset=["condition", "incident_id"], keep="last")
 
     total = int(frame["incident_id"].nunique()) if "incident_id" in frame.columns else 0
     if "llm_answered" in frame.columns:
@@ -383,6 +401,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--resume", default=None, metavar="RUN_ID",
                         help="continue an existing run from reports/benchmark_<run_id>.csv, "
                              "skipping incidents already recorded for each condition")
+    parser.add_argument("--retry-failed", action="store_true",
+                        help="with --resume, re-run incidents whose latest row failed (A and B only)")
     parser.add_argument("--reset", action="store_true",
                         help="delete the selected banks before running (use with --bank)")
     parser.add_argument("--keep-bank", action="store_true",
@@ -414,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
                              .get("status", ""))
             except (json.JSONDecodeError, OSError):
                 status = ""
-        make_chart(pd.read_csv(csv_path), chart_path, incomplete=status == "incomplete")
+        make_chart(read_run_rows(csv_path), chart_path, incomplete=status == "incomplete")
         print(f"Redrew {chart_path} from {csv_path}")
         return 0
     world = SimulatedWorld(settings.data_dir)
@@ -428,6 +448,15 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"unknown condition {token!r}; use A, B, C or D")
         wanted.append(matches[0])
     wanted = [c for c in CONDITIONS if c in wanted]
+
+    if args.retry_failed and not args.resume:
+        parser.error("--retry-failed requires --resume")
+    if args.retry_failed:
+        forbidden = [c for c in wanted if c in ("C_learning", "D_cold")]
+        if forbidden:
+            parser.error(
+                "retrying would change the memory state seen by later incidents; rerun the condition instead"
+            )
 
     run_id = (args.resume or args.bank
               or f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}-{secrets.token_hex(2)}")
@@ -462,11 +491,26 @@ def main(argv: list[str] | None = None) -> int:
         incidents = all_incidents[:args.limit] if args.limit else all_incidents
     incident_ids = [raw["id"] for raw in incidents]
 
-    done: dict[str, set[str]] = {
-        condition: (set(prior.loc[prior["condition"] == condition, "incident_id"])
-                    if not prior.empty else set())
-        for condition in wanted
-    }
+    done: dict[str, set[str]] = {}
+    retries: dict[str, set[str]] = {}
+    for condition in wanted:
+        if prior.empty:
+            done[condition] = set()
+            retries[condition] = set()
+            continue
+        cond_prior = prior[prior["condition"] == condition]
+        if cond_prior.empty:
+            done[condition] = set()
+            retries[condition] = set()
+            continue
+        latest_cond = cond_prior.drop_duplicates(subset=["incident_id"], keep="last")
+        if args.retry_failed:
+            failed_mask = latest_cond["llm_backend"] == "llm_failed"
+            done[condition] = set(latest_cond.loc[~failed_mask, "incident_id"])
+            retries[condition] = set(latest_cond.loc[failed_mask, "incident_id"])
+        else:
+            done[condition] = set(latest_cond["incident_id"])
+            retries[condition] = set()
 
     pacer = Pacer(tpm=args.tpm, minimum_seconds=args.pace)
     print(f"Benchmark run {run_id}")
@@ -500,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
         rows, memory, warning = run_condition(settings, world, condition, run_id, incidents,
                                               pacer=pacer, no_fallback=args.no_fallback,
                                               done_ids=done.get(condition, set()),
+                                              retry_ids=retries.get(condition, set()),
                                               on_row=sink)
         backends[condition] = memory.name
         warnings[condition] = warning
@@ -520,6 +565,9 @@ def main(argv: list[str] | None = None) -> int:
     missing_rows = {c: ids for c, ids in missing_rows.items() if ids}
     complete = bool(intended) and not missing_rows
 
+    total_retried = sum(int(s.get("retried_rows") or 0) for s in summary.values())
+    total_failed = sum(int(s.get("llm_failed_rows") or 0) for s in summary.values())
+
     payload = {
         "run_id": run_id,
         "status": "complete" if complete else "incomplete",
@@ -530,6 +578,8 @@ def main(argv: list[str] | None = None) -> int:
         "conditions_this_invocation": wanted,
         "missing_rows": missing_rows,
         "rows_already_recorded": int(len(prior)),
+        "retried_rows": total_retried,
+        "remaining_llm_failed": total_failed,
         "hindsight_configured": settings.has_hindsight,
         "groq_configured": settings.has_groq,
         "models": {"primary": settings.groq_model, "fallback": settings.groq_fallback_model},
@@ -540,6 +590,7 @@ def main(argv: list[str] | None = None) -> int:
                               "answered; heuristic-fallback and llm_failed rows are counted "
                               "and excluded",
             "resumable": True,
+            "retry_failed": bool(args.retry_failed),
             "no_fallback": bool(args.no_fallback),
             "tokens_per_minute_budget": int(args.tpm),
             "minimum_pace_seconds": float(args.pace),
@@ -574,10 +625,16 @@ def main(argv: list[str] | None = None) -> int:
               f"of {stats['llm_answered']}/{stats['incidents']} LLM-answered rows · "
               f"resolved {pct(stats['resolved_rate'])} · attempts "
               f"{num(stats['avg_attempts'])} · minutes {num(stats['avg_simulated_minutes'], 1)}")
-        if stats["fallback_rows"] or stats["llm_failed_rows"]:
-            print(f"      excluded: {stats['fallback_rows']} heuristic fallback(s), "
-                  f"{stats['llm_failed_rows']} llm_failed · all-rows top-1 would be "
+        if stats["fallback_rows"] or stats["llm_failed_rows"] or stats.get("retried_rows"):
+            parts: list[str] = []
+            if stats["fallback_rows"] or stats["llm_failed_rows"]:
+                parts.append(f"{stats['fallback_rows']} heuristic fallback(s)")
+                parts.append(f"{stats['llm_failed_rows']} llm_failed")
+            if stats.get("retried_rows"):
+                parts.append(f"{stats['retried_rows']} llm_failed rows retried")
+            print(f"      excluded: {', '.join(parts)} · all-rows top-1 would be "
                   f"{pct(stats['all_rows_top1'])}")
+    print(f"  retries: {total_retried} rows retried, {total_failed} remain llm_failed")
     print(f"  pacing: {pacer.waits} wait(s), {pacer.waited_seconds:.0f}s of the "
           f"{payload['elapsed_seconds']:.0f}s run")
     print(f"\nWrote {csv_path}")

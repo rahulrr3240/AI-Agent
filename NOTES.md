@@ -109,6 +109,10 @@ uses scores only to order groups when present. It never invents a score.
   `signing_key_rotation` have no history records at all, so for `INC-119`/`121`
   and `INC-120` memory can only help through in-run learning (after `INC-119`),
   never through seeding.
+- **Mechanical retries of infrastructure failures.** Infrastructure failures
+  (rate limit/network, recorded as `llm_failed`) are retried mechanically for
+  every failed row regardless of outcome, and retries are flagged in the CSV
+  (`retry_of_failed`).
 
 ## Reliability choices
 

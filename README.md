@@ -192,6 +192,10 @@ summary and chart are recomputed from every row in the run's CSV, and a run that
 is missing rows is marked `"status": "incomplete"` in the JSON and in the chart
 title.
 
+### Dataset design and freeze
+
+The evaluation incidents, answer keys, and scoring criteria were frozen before benchmark runs. Infrastructure failures (rate limit/network, recorded as `llm_failed`) are retried mechanically for every failed row regardless of outcome, and retries are flagged in the CSV (`retry_of_failed`).
+
 ### Memory evidence
 
 Compare mode on `INC-103`: with memory OFF the agent ranks `restart_service`
@@ -268,6 +272,7 @@ before exposing it anywhere.
 python -m oncall.evaluate                        # full 20 incidents × 4 conditions A/B/C/D (real API calls)
 python -m oncall.evaluate --conditions A,B,D     # run a subset of conditions
 python -m oncall.evaluate --resume <run_id>      # continue a run from its own CSV
+python -m oncall.evaluate --resume <run_id> --retry-failed  # re-run failed rows (A and B only)
 python -m oncall.evaluate --no-fallback          # count only rows the LLM actually answered
 python -m oncall.evaluate --tpm 6500 --pace 3    # pace under the Groq free-tier token limit
 python -m oncall.evaluate --limit 5              # smoke run
