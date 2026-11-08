@@ -10,6 +10,12 @@ With ONCALL_DEBUG_LLM=1, every attempt that fails to parse or validate is writte
 to .llm_failures/ (model, error, raw output) for inspection. Default runs write
 nothing, and neither the prompt nor the API key is ever recorded.
 
+gpt-oss models are reasoning models: their hidden reasoning tokens are billed
+against `max_tokens`, so a long think can exhaust the budget and return an empty
+or half-written object with finish_reason=length. They are called with
+`reasoning_effort` (GROQ_REASONING_EFFORT, default "low"), and any reply that
+stopped at the token limit is rejected even if its text happens to parse.
+
 Rate limits (429) are retried with exponential backoff. Reasoning tags some
 models emit (`<think>...</think>`, ```` ```json ```` fences) are stripped before
 parsing. Token usage and latency are returned so the UI can show them.
@@ -39,6 +45,19 @@ class LLMError(RuntimeError):
 
 DEBUG_ENV = "ONCALL_DEBUG_LLM"
 FAILURE_DIR = Path(BASE_DIR) / ".llm_failures"
+
+REASONING_EFFORT_ENV = "GROQ_REASONING_EFFORT"
+DEFAULT_REASONING_EFFORT = "low"
+REASONING_MODEL_PREFIX = "openai/gpt-oss"
+# An org whose API rejects reasoning_effort should not pay a failed round trip on
+# every call, so a rejection disables it for the rest of the process.
+_reasoning_effort_supported = True
+
+
+def reasoning_effort() -> str:
+    """Configured reasoning effort for gpt-oss models (GROQ_REASONING_EFFORT)."""
+    configured = os.environ.get(REASONING_EFFORT_ENV, "").strip().lower()
+    return configured or DEFAULT_REASONING_EFFORT
 
 
 def describe_validation_error(exc: ValidationError) -> str:
@@ -114,14 +133,39 @@ def strip_reasoning(text: str) -> str:
 
 
 def extract_json(text: str) -> str:
+    """Return the first complete top-level JSON object, or raise.
+
+    Uses a brace-matching scan rather than `rfind("}")`: with `rfind`, a reply cut
+    off mid-object could be trimmed back to a closing brace belonging to a nested
+    object and then parse as if it were the whole answer. Truncated text now
+    raises, and braces inside strings are ignored.
+    """
     cleaned = strip_reasoning(text)
-    if cleaned.startswith("{") and cleaned.endswith("}"):
-        return cleaned
     start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start == -1 or end <= start:
+    if start == -1:
         raise ValueError("no JSON object found in response")
-    return cleaned[start:end + 1]
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(cleaned)):
+        char = cleaned[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return cleaned[start:index + 1]
+    raise ValueError("unbalanced JSON object (response looks truncated)")
 
 
 def schema_hint(schema: type[BaseModel]) -> str:
@@ -176,10 +220,37 @@ class GroqLLM:
         return self._client
 
     # -- one model attempt --------------------------------------------------
+    def _request(self, client, kwargs: dict[str, Any], effort: str):
+        """One completion, dropping reasoning_effort if this org rejects it."""
+        global _reasoning_effort_supported
+        payload = dict(kwargs)
+        if effort and _reasoning_effort_supported:
+            payload["reasoning_effort"] = effort
+        try:
+            return self._send(client, payload)
+        except Exception as exc:  # noqa: BLE001 - only this parameter is optional
+            if payload.get("reasoning_effort") and "reasoning" in str(exc).lower():
+                _reasoning_effort_supported = False
+                payload.pop("reasoning_effort", None)
+                return self._send(client, payload)
+            raise
+
+    @staticmethod
+    def _send(client, payload: dict[str, Any]):
+        """Prefer JSON mode; some models reject response_format."""
+        try:
+            return client.chat.completions.create(
+                response_format={"type": "json_object"}, **payload)
+        except Exception as exc:  # noqa: BLE001 - model may reject JSON mode
+            if "response_format" not in str(exc).lower() and "json" not in str(exc).lower():
+                raise
+            return client.chat.completions.create(**payload)
+
     def _complete(self, model: str, messages: list[dict[str, Any]],
                   max_tokens: int, temperature: float) -> tuple[str, dict[str, Any]]:
         client = self._get_client()
         last_error: Exception | None = None
+        effort = reasoning_effort() if model.startswith(REASONING_MODEL_PREFIX) else ""
         for attempt in range(3):  # 429 backoff inside a single model attempt
             kwargs: dict[str, Any] = dict(
                 model=model,
@@ -188,14 +259,7 @@ class GroqLLM:
                 max_tokens=max_tokens,
             )
             try:
-                try:
-                    response = client.chat.completions.create(
-                        response_format={"type": "json_object"}, **kwargs
-                    )
-                except Exception as exc:  # noqa: BLE001 - model may reject JSON mode
-                    if "response_format" not in str(exc).lower() and "json" not in str(exc).lower():
-                        raise
-                    response = client.chat.completions.create(**kwargs)
+                response = self._request(client, kwargs, effort)
                 choice = response.choices[0]
                 content = choice.message.content or ""
                 usage = getattr(response, "usage", None)
@@ -287,6 +351,15 @@ class GroqLLM:
             finish_reason = str(usage.get("finish_reason", "") or "")
             prompt_tokens += usage["prompt_tokens"]
             completion_tokens += usage["completion_tokens"]
+            if finish_reason == "length":
+                # A reply that stopped at the token limit is not an answer, even if
+                # the fragment happens to be valid JSON: the reasoning budget ran
+                # out mid-object, so fields are missing or inventable. Fail the
+                # attempt and let the repair retries run with a larger budget.
+                last_error = "truncated at token limit"
+                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts,
+                                finish_reason, usage["completion_tokens"])
+                continue
             try:
                 payload = json.loads(extract_json(raw))
             except ValueError as exc:  # no JSON object at all, or malformed JSON
@@ -309,8 +382,6 @@ class GroqLLM:
             repaired = needs_repair
             latency_ms = int((time.perf_counter() - started) * 1000)
             notes = []
-            if finish_reason == "length":
-                notes.append("model stopped at the token limit (finish_reason=length)")
             if attempt_model != primary:
                 notes.append(f"primary model failed; answered by fallback {attempt_model}")
             if repaired:

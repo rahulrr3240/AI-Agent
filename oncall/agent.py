@@ -46,7 +46,7 @@ from oncall.tools import SimulatedWorld, detect_pattern, tool_descriptions
 
 # The reasoning call's completion budget. Groq counts `prompt + max_tokens`
 # against its tokens-per-minute limit, so the benchmark paces on this number.
-REASONING_MAX_TOKENS = 1200
+REASONING_MAX_TOKENS = 2000
 
 SYSTEM_PROMPT = """You are OnCall Memory, an incident-response copilot for a production engineering team.
 
