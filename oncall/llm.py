@@ -6,6 +6,10 @@ Reliability ladder for every call:
   3. fallback model + the same repair instruction
   4. raise LLMError (the agent then uses its deterministic analyzer)
 
+With ONCALL_DEBUG_LLM=1, every attempt that fails to parse or validate is written
+to .llm_failures/ (model, error, raw output) for inspection. Default runs write
+nothing, and neither the prompt nor the API key is ever recorded.
+
 Rate limits (429) are retried with exponential backoff. Reasoning tags some
 models emit (`<think>...</think>`, ```` ```json ```` fences) are stripped before
 parsing. Token usage and latency are returned so the UI can show them.
@@ -13,20 +17,69 @@ parsing. Token usage and latency are returned so the UI can show them.
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from oncall.config import Settings
+from oncall.config import BASE_DIR, Settings
 
 T = TypeVar("T", bound=BaseModel)
 
 
 class LLMError(RuntimeError):
     """No usable model response after every retry."""
+
+
+DEBUG_ENV = "ONCALL_DEBUG_LLM"
+FAILURE_DIR = Path(BASE_DIR) / ".llm_failures"
+
+
+def describe_validation_error(exc: ValidationError) -> str:
+    """Name the fields that failed, so the repair prompt and the final error are specific."""
+    problems = []
+    for error in exc.errors()[:6]:
+        location = ".".join(str(part) for part in error.get("loc", ())) or "<root>"
+        problems.append(f"{location}: {error.get('msg', 'invalid')} [{error.get('type', '')}]")
+    return "schema validation failed: " + ("; ".join(problems) or "no detail")
+
+
+def capture_failure(model: str, error: str, raw: str, schema_name: str,
+                    attempt: int) -> Path | None:
+    """Write one failed attempt to .llm_failures/ when ONCALL_DEBUG_LLM=1.
+
+    Only what the model produced is recorded: the request messages (prompt) and
+    the API key are never written. Diagnostics must never break a call, so an I/O
+    problem is reported and ignored.
+    """
+    if os.environ.get(DEBUG_ENV) != "1":
+        return None
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    path = FAILURE_DIR / f"{stamp}-attempt{attempt}-{schema_name}.txt"
+    try:
+        FAILURE_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f"model: {model}\n"
+            f"schema: {schema_name}\n"
+            f"attempt: {attempt}\n"
+            f"error: {error}\n"
+            f"raw_chars: {len(raw)}\n"
+            "--- raw model output ---\n"
+            f"{raw}\n"
+            "--- end raw model output ---\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        print(f"[llm] could not write {path}: {exc}", file=sys.stderr)
+        return None
+    print(f"[llm] captured failed attempt -> {path}", file=sys.stderr)
+    return path
 
 
 @dataclass
@@ -228,12 +281,19 @@ class GroqLLM:
             completion_tokens += usage["completion_tokens"]
             try:
                 payload = json.loads(extract_json(raw))
-                validated = schema.model_validate(payload)
-            except (ValueError, json.JSONDecodeError) as exc:
+            except ValueError as exc:  # no JSON object at all, or malformed JSON
                 last_error = f"invalid JSON: {exc}"
+                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts)
                 continue
+            try:
+                validated = schema.model_validate(payload)
             except ValidationError as exc:
-                last_error = f"schema validation failed: {exc.errors()[:3]}"
+                # ValidationError subclasses ValueError, so it must be caught on
+                # its own after the JSON step: one combined `except ValueError`
+                # reports every missing field as "invalid JSON" and the repair
+                # prompt then cannot name the field.
+                last_error = describe_validation_error(exc)
+                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts)
                 continue
 
             repaired = needs_repair
