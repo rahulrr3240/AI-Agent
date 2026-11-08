@@ -62,6 +62,18 @@ docs/                          ← does not exist yet; create it when you captur
 
 Hindsight is not a side panel here: it is the part that makes the answer better.
 
+**One revision, disclosed.** After the eval data was frozen, a smoke run on
+`INC-122` with memory ON showed the model following the family-wide tallies — a
+fix recorded as working for every service — while ignoring a recalled
+same-service postmortem that recorded a team constraint. Outcome tallies are now
+scoped two ways and the prompt carries both, labelled: outcomes for this
+incident's own service first, the all-services count beside them. The system
+prompt states that a recorded team rule, constraint, or the reason a fix was
+blocked or failed overrides the tallies when the incident's deploy, service or
+logs match it, and that a fix which failed for this service is demoted below one
+that worked here. That was a single revision in response to observed behaviour,
+made before any benchmark run; the prompts are frozen from that commit.
+
 ### Retain — what gets stored
 
 **One document per incident** (`document_id=incident-INC-014`, so re-seeding

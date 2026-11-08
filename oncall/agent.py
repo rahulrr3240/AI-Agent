@@ -53,7 +53,7 @@ SYSTEM_PROMPT = """You are OnCall Memory, an incident-response copilot for a pro
 Rules:
 1. Use ONLY the supplied incident context (logs, deploys, metrics, recalled memories). Do not invent services, versions, log lines or incident IDs.
 2. Cite specific evidence: exact log lines, deploy versions/times or metric values.
-3. Memory is advisory. Prefer fixes with recorded successes. A fix recorded as FAILED for the same failure pattern must be demoted below fixes that worked, and you must say why.
+3. Recorded fix outcomes are advisory tallies. A recalled memory that records a team rule, a constraint, or the reason a fix was blocked or failed overrides the tallies when the current incident's deploy, service or logs match that context; cite its incident id and say so in the rationale. Prefer same-service outcomes over other services. If a fix failed for the same service and failure pattern, demote it below fixes that worked there.
 4. If a fix worked once and failed later, mention the conflict and lower confidence.
 5. If the recalled memories are not genuinely similar to this incident, set no_relevant_history=true and give a clearly generic best-effort answer with confidence "low". Do not cite any incident IDs in that case.
 6. Only cite incident IDs that appear in the recalled memories (they look like INC-###, or LIVE-… for incidents resolved from real alerts). Never cite the incident you are investigating. Put the reason each one is similar in why_similar.
@@ -244,7 +244,8 @@ class InvestigationAgent:
 
         history = fix_history_from_memories(memories) if effective_memory else {}
         conflicts = conflicting_fixes(history) if effective_memory else []
-        result = self._postprocess(result, memories, history, effective_memory, conflicts)
+        result = self._postprocess(result, memories, history, effective_memory, conflicts,
+                                   inc.service)
         result.similar_incidents = [s for s in result.similar_incidents if s.id != inc.id]
 
         if evidence is not None:
@@ -377,13 +378,30 @@ class InvestigationAgent:
     def _build_messages(self, inc: Incident, logs: dict, deploys: list[dict], metrics: dict,
                         memories: list[MemoryHit], memory_on: bool) -> list[dict[str, str]]:
         history = fix_history_from_memories(memories) if memory_on else {}
+        def scoped(entry: dict[str, Any], service: str) -> dict[str, Any] | None:
+            """Outcomes recorded for this incident's own service, if any."""
+            by_service = (entry.get("by_service") or {}).get(service)
+            if not by_service:
+                return None
+            return {
+                "service": service,
+                "worked": by_service["worked"],
+                "failed": by_service["failed"],
+                "partial": by_service["partial"],
+                "incidents": sorted(by_service["incidents"]),
+            }
+
         history_rows = [
             {
                 "fix": fix,
-                "worked": entry["worked"],
-                "failed": entry["failed"],
-                "partial": entry["partial"],
-                "incidents": sorted(entry["incidents"]),
+                "same_service": scoped(entry, inc.service),
+                "family_wide": {
+                    "worked": entry["worked"],
+                    "failed": entry["failed"],
+                    "partial": entry["partial"],
+                    "services": sorted(entry["services"]),
+                    "incidents": sorted(entry["incidents"]),
+                },
             }
             for fix, entry in sorted(
                 history.items(), key=lambda kv: (kv[1]["worked"] - kv[1]["failed"]), reverse=True)
@@ -442,6 +460,8 @@ class InvestigationAgent:
             )
         if metrics.get("available"):
             evidence.append(f"Metrics: {_metrics_line(metrics)}")
+        if not evidence:  # evidence is required and non-empty in AgentResult
+            evidence.append("The log extract had no error lines and no deploy or metric context was available.")
 
         similar: list[SimilarIncident] = []
         seen: set[str] = set()
@@ -458,20 +478,30 @@ class InvestigationAgent:
 
         ranked: list[RankedFix] = []
         if history:
+            def same(entry: dict[str, Any]) -> dict[str, Any]:
+                return (entry.get("by_service") or {}).get(inc.service) or {}
+
             ordered = sorted(
                 history.items(),
-                key=lambda kv: (kv[1]["worked"] > 0, kv[1]["worked"] - kv[1]["failed"], kv[1]["worked"]),
+                key=lambda kv: (same(kv[1]).get("worked", 0) > 0,
+                                same(kv[1]).get("worked", 0) - same(kv[1]).get("failed", 0),
+                                kv[1]["worked"] > 0,
+                                kv[1]["worked"] - kv[1]["failed"],
+                                kv[1]["worked"]),
                 reverse=True,
             )
             for fix, entry in ordered[:4]:
-                if entry["worked"] == 0:
+                if entry["worked"] == 0 and same(entry).get("worked", 0) == 0:
                     continue
+                mine = same(entry)
                 ranked.append(RankedFix(
                     fix=fix,
-                    rationale=(f"Recorded {entry['worked']} success(es) and {entry['failed']} failure(s) "
-                               f"for this pattern in past incidents."),
+                    rationale=(f"Recorded {mine.get('worked', 0)} success(es) and "
+                               f"{mine.get('failed', 0)} failure(s) on {inc.service}; "
+                               f"{entry['worked']} success(es) and {entry['failed']} failure(s) "
+                               f"across all services."),
                     based_on_history=True,
-                    past_outcomes=past_outcomes_text(entry),
+                    past_outcomes=past_outcomes_text(entry, inc.service),
                 ))
         for fix in _generic_fixes():
             if len(ranked) >= 3:
@@ -481,7 +511,7 @@ class InvestigationAgent:
                     fix=fix,
                     rationale="Generic best-effort step; no matching history was consulted.",
                     based_on_history=False,
-                    past_outcomes=past_outcomes_text(history.get(fix)),
+                    past_outcomes=past_outcomes_text(history.get(fix), inc.service),
                 ))
         if not ranked:  # pragma: no cover - generic list is never empty
             ranked = [RankedFix(fix="restart_service", rationale="Best effort.", based_on_history=False)]
@@ -517,7 +547,7 @@ class InvestigationAgent:
     # ----------------------------------------------------------- postprocess
     def _postprocess(self, result: AgentResult, memories: list[MemoryHit],
                      history: dict[str, dict[str, Any]], memory_on: bool,
-                     conflicts: list[str]) -> AgentResult:
+                     conflicts: list[str], service: str = "") -> AgentResult:
         valid_ids = memory_incident_ids(memories) if memory_on else set()
         cleaned_similar = []
         seen: set[str] = set()
@@ -546,13 +576,13 @@ class InvestigationAgent:
             entry = history.get(fix.fix)
             if entry and (entry["worked"] or entry["failed"] or entry["partial"]):
                 fix.based_on_history = True
-                fix.past_outcomes = past_outcomes_text(entry)
+                fix.past_outcomes = past_outcomes_text(entry, service)
             else:
                 fix.based_on_history = False
                 fix.past_outcomes = "none"
 
         if memory_on and history:
-            result.ranked_fixes = self._apply_memory_guardrail(result.ranked_fixes, history)
+            result.ranked_fixes = self._apply_memory_guardrail(result.ranked_fixes, history, service)
 
         if conflicts:
             line = ("Conflicting memory: " + ", ".join(conflicts)
@@ -568,33 +598,51 @@ class InvestigationAgent:
 
     @staticmethod
     def _apply_memory_guardrail(ranked: list[RankedFix],
-                                history: dict[str, dict[str, Any]]) -> list[RankedFix]:
-        """Stable-demote fixes with recorded failures; surface a missing known-good fix."""
+                                history: dict[str, dict[str, Any]],
+                                service: str = "") -> list[RankedFix]:
+        """Stable-demote fixes with recorded failures; surface a missing known-good fix.
 
-        def bucket(fix: str) -> int:
+        Same-service outcomes outrank family-wide tallies: a fix that failed for
+        this service is demoted even when it worked elsewhere, and one that worked
+        here is surfaced even when the family-wide count is unimpressive.
+        """
+
+        def counts(fix: str) -> dict[str, Any] | None:
             entry = history.get(fix)
             if not entry:
+                return None
+            mine = (entry.get("by_service") or {}).get(service)
+            if mine and (mine["worked"] or mine["failed"] or mine["partial"]):
+                return mine
+            return entry
+
+        def bucket(fix: str) -> int:
+            current = counts(fix)
+            if current is None:
                 return 1
-            if entry["worked"] and not entry["failed"]:
+            if current["worked"] and not current["failed"]:
                 return 0
-            if entry["worked"]:
+            if current["worked"]:
                 return 1
-            return 2 if entry["failed"] else 1
+            return 2 if current["failed"] else 1
 
         ordered = sorted(ranked, key=lambda f: bucket(f.fix))
         best = sorted(
-            (fix for fix, e in history.items() if e["worked"] > 0),
-            key=lambda fix: (history[fix]["worked"] - history[fix]["failed"], history[fix]["worked"]),
+            (fix for fix, e in history.items() if (counts(fix) or {}).get("worked", 0) > 0),
+            key=lambda fix: ((counts(fix) or {}).get("worked", 0) - (counts(fix) or {}).get("failed", 0),
+                             (counts(fix) or {}).get("worked", 0)),
             reverse=True,
         )
         if best and all(f.fix != best[0] for f in ordered):
             entry = history[best[0]]
+            chosen = counts(best[0]) or entry
+            where = f" on {service}" if chosen is not entry else " across services"
             ordered.insert(0, RankedFix(
                 fix=best[0],
                 rationale=("Added from memory: this fix has recorded successes for the same failure "
-                           f"pattern ({entry['worked']} worked)."),
+                           f"pattern ({chosen['worked']} worked{where})."),
                 based_on_history=True,
-                past_outcomes=past_outcomes_text(entry),
+                past_outcomes=past_outcomes_text(entry, service),
             ))
         return ordered[:5]
 

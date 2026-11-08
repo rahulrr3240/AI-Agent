@@ -690,13 +690,22 @@ def fix_history_from_memories(memories: Iterable[MemoryHit]) -> dict[str, dict[s
         if not fix:
             return
         entry = history.setdefault(fix, {"worked": 0, "failed": 0, "partial": 0,
-                                         "incidents": set(), "services": set()})
-        if outcome in entry:
+                                         "incidents": set(), "services": set(),
+                                         "by_service": {}})
+        if outcome in ("worked", "failed", "partial"):
             entry[outcome] += 1
         if incident_id:
             entry["incidents"].add(incident_id)
         if service:
             entry["services"].add(service)
+            # Same-service scope: a fix that failed for this service is not
+            # redeemed by successes on other services, and vice versa.
+            scoped = entry["by_service"].setdefault(
+                service, {"worked": 0, "failed": 0, "partial": 0, "incidents": set()})
+            if outcome in ("worked", "failed", "partial"):
+                scoped[outcome] += 1
+            if incident_id:
+                scoped["incidents"].add(incident_id)
 
     for hit in memories:
         meta = hit.metadata or {}
@@ -711,13 +720,29 @@ def fix_history_from_memories(memories: Iterable[MemoryHit]) -> dict[str, dict[s
     return history
 
 
-def past_outcomes_text(entry: dict[str, Any] | None) -> str:
+def past_outcomes_text(entry: dict[str, Any] | None, service: str | None = None) -> str:
+    """Render an outcome tally for a rationale or the UI's "history:" chip.
+
+    When outcomes exist for the incident's own service they are shown first: a
+    family-wide count can hide a rule recorded on that one service.
+    """
     if not entry:
         return "none"
     worked, failed, partial = entry["worked"], entry["failed"], entry["partial"]
-    if not (worked or failed or partial):
+    total = worked + failed + partial
+    if not total:
         return "none"
-    return f"worked {worked}/{worked + failed + partial} | failed {failed} | partial {partial}"
+    scoped = (entry.get("by_service") or {}).get(service) if service else None
+    if scoped and (scoped["worked"] or scoped["failed"] or scoped["partial"]):
+        same_total = scoped["worked"] + scoped["failed"] + scoped["partial"]
+        parts = [f"{service}: worked {scoped['worked']}/{same_total}",
+                 f"all services: worked {worked}/{total}"]
+        if failed:
+            parts.append(f"failed {failed}")
+        if partial:
+            parts.append(f"partial {partial}")
+        return " | ".join(parts)
+    return f"worked {worked}/{total} | failed {failed} | partial {partial}"
 
 
 def conflicting_fixes(history: dict[str, dict[str, Any]]) -> list[str]:

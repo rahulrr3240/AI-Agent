@@ -97,6 +97,14 @@ uses scores only to order groups when present. It never invents a score.
   hidden `true_fix`, and simulated minutes are computed from attempts (6 base + 8
   per failure), never hand-entered. Neither the metric, the acceptable answers
   nor the prompt were adjusted once results existed.
+- **One prompt revision, disclosed.** After the freeze, a smoke run on `INC-122`
+  with memory ON showed the model following family-wide tallies over a recalled
+  same-service postmortem that recorded a team constraint (and returning no
+  evidence). The prompt and the outcome scoping were revised once in response:
+  tallies are now split into same-service and family-wide and both are labelled
+  in the context, rule 3 says a matching recorded constraint overrides the
+  tallies, and `evidence` is now required with at least one line. That happened
+  before any benchmark run on this set; the prompts are frozen from that commit.
 - **The novel families stay novel.** `kafka_consumer_lag` and
   `signing_key_rotation` have no history records at all, so for `INC-119`/`121`
   and `INC-120` memory can only help through in-run learning (after `INC-119`),

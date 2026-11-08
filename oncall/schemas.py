@@ -151,7 +151,7 @@ class AgentResult(BaseModel):
     confidence: Literal["low", "medium", "high"]
     ranked_fixes: list[RankedFix] = Field(min_length=1, max_length=5)
     no_relevant_history: bool = False
-    evidence: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(min_length=1)
     similar_incidents: list[SimilarIncident] = Field(default_factory=list)
 
     @field_validator("ranked_fixes")
