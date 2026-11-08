@@ -51,7 +51,8 @@ def describe_validation_error(exc: ValidationError) -> str:
 
 
 def capture_failure(model: str, error: str, raw: str, schema_name: str,
-                    attempt: int) -> Path | None:
+                    attempt: int, finish_reason: str = "",
+                    completion_tokens: int = 0) -> Path | None:
     """Write one failed attempt to .llm_failures/ when ONCALL_DEBUG_LLM=1.
 
     Only what the model produced is recorded: the request messages (prompt) and
@@ -69,6 +70,8 @@ def capture_failure(model: str, error: str, raw: str, schema_name: str,
             f"schema: {schema_name}\n"
             f"attempt: {attempt}\n"
             f"error: {error}\n"
+            f"finish_reason: {finish_reason or 'unknown'}\n"
+            f"completion_tokens: {completion_tokens}\n"
             f"raw_chars: {len(raw)}\n"
             "--- raw model output ---\n"
             f"{raw}\n"
@@ -174,7 +177,7 @@ class GroqLLM:
 
     # -- one model attempt --------------------------------------------------
     def _complete(self, model: str, messages: list[dict[str, Any]],
-                  max_tokens: int, temperature: float) -> tuple[str, dict[str, int]]:
+                  max_tokens: int, temperature: float) -> tuple[str, dict[str, Any]]:
         client = self._get_client()
         last_error: Exception | None = None
         for attempt in range(3):  # 429 backoff inside a single model attempt
@@ -193,11 +196,15 @@ class GroqLLM:
                     if "response_format" not in str(exc).lower() and "json" not in str(exc).lower():
                         raise
                     response = client.chat.completions.create(**kwargs)
-                content = response.choices[0].message.content or ""
+                choice = response.choices[0]
+                content = choice.message.content or ""
                 usage = getattr(response, "usage", None)
                 return content, {
                     "prompt_tokens": int(getattr(usage, "prompt_tokens", 0) or 0),
                     "completion_tokens": int(getattr(usage, "completion_tokens", 0) or 0),
+                    # "length" means the object was cut off mid-answer, which is a
+                    # different failure from the model choosing to stop early.
+                    "finish_reason": str(getattr(choice, "finish_reason", "") or ""),
                 }
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
@@ -277,13 +284,15 @@ class GroqLLM:
                 continue
 
             last_raw = raw
+            finish_reason = str(usage.get("finish_reason", "") or "")
             prompt_tokens += usage["prompt_tokens"]
             completion_tokens += usage["completion_tokens"]
             try:
                 payload = json.loads(extract_json(raw))
             except ValueError as exc:  # no JSON object at all, or malformed JSON
                 last_error = f"invalid JSON: {exc}"
-                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts)
+                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts,
+                                finish_reason, usage["completion_tokens"])
                 continue
             try:
                 validated = schema.model_validate(payload)
@@ -293,12 +302,15 @@ class GroqLLM:
                 # reports every missing field as "invalid JSON" and the repair
                 # prompt then cannot name the field.
                 last_error = describe_validation_error(exc)
-                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts)
+                capture_failure(attempt_model, last_error, raw, schema.__name__, attempts,
+                                finish_reason, usage["completion_tokens"])
                 continue
 
             repaired = needs_repair
             latency_ms = int((time.perf_counter() - started) * 1000)
             notes = []
+            if finish_reason == "length":
+                notes.append("model stopped at the token limit (finish_reason=length)")
             if attempt_model != primary:
                 notes.append(f"primary model failed; answered by fallback {attempt_model}")
             if repaired:

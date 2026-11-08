@@ -59,6 +59,7 @@ Rules:
 6. Only cite incident IDs that appear in the recalled memories (they look like INC-###, or LIVE-… for incidents resolved from real alerts). Never cite the incident you are investigating. Put the reason each one is similar in why_similar.
 7. ranked_fixes use ONLY ids from the supplied FIX VOCABULARY, ordered best first.
 8. The answer is advisory: no action is executed.
+9. Key order is part of the contract: write `ranked_fixes` immediately after `confidence`, then `no_relevant_history`, before `evidence` and `similar_incidents`. A response without ranked_fixes is invalid and will be rejected, so never stop before it.
 
 Return one JSON object matching the requested schema. No prose outside JSON."""
 
@@ -419,7 +420,9 @@ class InvestigationAgent:
             "Investigate this alert and return the JSON object.\n\n"
             + json.dumps(context, separators=(",", ":"))
             + "\n\nSchema (all fields required):\n" + schema_hint(AgentResult)
+            + "\nWrite ranked_fixes immediately after confidence, before no_relevant_history, evidence and similar_incidents."
             + "\nranked_fixes: 1-5 entries, unique ids taken from FIX VOCABULARY, best first."
+            + " A response without ranked_fixes is invalid."
         )
         return [
             {"role": "system", "content": SYSTEM_PROMPT},

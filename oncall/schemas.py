@@ -138,12 +138,21 @@ class RankedFix(BaseModel):
 
 
 class AgentResult(BaseModel):
+    """The agent's answer.
+
+    Field order is deliberate: reasoning models that emit a closed object tend to
+    stop after a plausible-looking run of keys, so the keys that must never be
+    missing (`ranked_fixes`, `no_relevant_history`) come straight after
+    `confidence`, ahead of the evidence lists. The required-ness is unchanged —
+    `ranked_fixes` is still mandatory.
+    """
+
     likely_cause: str
     confidence: Literal["low", "medium", "high"]
-    evidence: list[str] = Field(default_factory=list)
-    similar_incidents: list[SimilarIncident] = Field(default_factory=list)
     ranked_fixes: list[RankedFix] = Field(min_length=1, max_length=5)
     no_relevant_history: bool = False
+    evidence: list[str] = Field(default_factory=list)
+    similar_incidents: list[SimilarIncident] = Field(default_factory=list)
 
     @field_validator("ranked_fixes")
     @classmethod
