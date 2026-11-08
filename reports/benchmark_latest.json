@@ -1,86 +1,99 @@
 {
-  "run_id": "20261107-124631-2e4f",
-  "generated_at": "2026-11-07T13:07:01.830040+00:00",
-  "incidents": 20,
+  "run_id": "20261108-032816-b7cc",
+  "status": "complete",
+  "generated_at": "2026-11-08T04:19:17.179140+00:00",
+  "incidents": 25,
+  "incident_ids": [
+    "INC-101",
+    "INC-102",
+    "INC-103",
+    "INC-104",
+    "INC-105",
+    "INC-106",
+    "INC-107",
+    "INC-108",
+    "INC-109",
+    "INC-110",
+    "INC-111",
+    "INC-112",
+    "INC-113",
+    "INC-114",
+    "INC-115",
+    "INC-116",
+    "INC-117",
+    "INC-119",
+    "INC-120",
+    "INC-121",
+    "INC-122",
+    "INC-123",
+    "INC-124",
+    "INC-125",
+    "INC-126"
+  ],
   "conditions": [
     "A_off",
-    "B_seeded",
-    "C_learning"
+    "B_seeded"
   ],
+  "conditions_this_invocation": [
+    "A_off",
+    "B_seeded"
+  ],
+  "missing_rows": {},
+  "rows_already_recorded": 0,
   "hindsight_configured": true,
   "groq_configured": true,
   "models": {
     "primary": "openai/gpt-oss-120b",
-    "fallback": "qwen/qwen3-32b"
+    "fallback": "openai/gpt-oss-20b"
   },
   "memory_backends": {
     "A_off": "hindsight",
-    "B_seeded": "local-keyword",
-    "C_learning": "local-keyword"
+    "B_seeded": "hindsight"
   },
-  "memory_warnings": {
-    "A_off": null,
-    "B_seeded": "Hindsight unavailable (cannot create bank 'oncall-eval-20261107-124631-2e4f-b_seeded': Cannot connect to host api.hindsight.vectorize.io:443 ssl:default [getaddrinfo failed]). Using local keyword fallback.",
-    "C_learning": "Hindsight unavailable (cannot create bank 'oncall-eval-20261107-124631-2e4f-c_learning': Cannot connect to host api.hindsight.vectorize.io:443 ssl:default [getaddrinfo failed]). Using local keyword fallback."
-  },
+  "memory_warnings": {},
   "method": {
     "headline_basis": "top-1/resolved/attempts/minutes are computed on rows the LLM answered; heuristic-fallback and llm_failed rows are counted and excluded",
+    "resumable": true,
     "no_fallback": true,
     "tokens_per_minute_budget": 6500,
-    "minimum_pace_seconds": 3.0,
-    "seconds_spent_pacing": 1170.9,
-    "pacing_waits": 60,
+    "minimum_pace_seconds": 2.0,
+    "seconds_spent_pacing": 2172.8,
+    "pacing_waits": 50,
     "prompt_log_chars": 3000
   },
   "summary": {
     "A_off": {
-      "incidents": 20,
-      "llm_answered": 11,
+      "incidents": 25,
+      "llm_answered": 25,
       "fallback_rows": 0,
-      "llm_failed_rows": 9,
-      "headline_basis": "rows answered by the LLM only",
-      "top1_accuracy": 0.7273,
-      "resolved_rate": 1.0,
-      "avg_attempts": 1.273,
-      "avg_simulated_minutes": 8.18,
-      "second_half_top1": 0.8333,
-      "novel_incidents": 0,
-      "novel_flag_accuracy": null,
-      "avg_prompt_tokens": 1556.7,
-      "all_rows_top1": 0.4
+      "llm_failed_rows": 0,
+      "headline_basis": "all rows were LLM-answered",
+      "top1_accuracy": 0.64,
+      "resolved_rate": 0.88,
+      "avg_attempts": 1.88,
+      "avg_simulated_minutes": 14.0,
+      "second_half_top1": 0.6154,
+      "novel_incidents": 2,
+      "novel_flag_accuracy": NaN,
+      "avg_prompt_tokens": 1719.6,
+      "all_rows_top1": 0.64
     },
     "B_seeded": {
-      "incidents": 20,
-      "llm_answered": 0,
+      "incidents": 25,
+      "llm_answered": 17,
       "fallback_rows": 0,
-      "llm_failed_rows": 20,
+      "llm_failed_rows": 8,
       "headline_basis": "rows answered by the LLM only",
-      "top1_accuracy": null,
-      "resolved_rate": null,
-      "avg_attempts": null,
-      "avg_simulated_minutes": null,
-      "second_half_top1": null,
-      "novel_incidents": 0,
-      "novel_flag_accuracy": null,
-      "avg_prompt_tokens": null,
-      "all_rows_top1": 0.0
-    },
-    "C_learning": {
-      "incidents": 20,
-      "llm_answered": 0,
-      "fallback_rows": 0,
-      "llm_failed_rows": 20,
-      "headline_basis": "rows answered by the LLM only",
-      "top1_accuracy": null,
-      "resolved_rate": null,
-      "avg_attempts": null,
-      "avg_simulated_minutes": null,
-      "second_half_top1": null,
-      "novel_incidents": 0,
-      "novel_flag_accuracy": null,
-      "avg_prompt_tokens": null,
-      "all_rows_top1": 0.0
+      "top1_accuracy": 0.7059,
+      "resolved_rate": 1.0,
+      "avg_attempts": 1.412,
+      "avg_simulated_minutes": 9.29,
+      "second_half_top1": 0.7778,
+      "novel_incidents": 1,
+      "novel_flag_accuracy": 1.0,
+      "avg_prompt_tokens": 2888.9,
+      "all_rows_top1": 0.48
     }
   },
-  "elapsed_seconds": 1230.8
+  "elapsed_seconds": 3060.6
 }
