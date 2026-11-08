@@ -20,12 +20,12 @@ flowchart LR
         LLM[llm.py<br/>Groq JSON + repair + fallback]
         MEM[memory.py<br/>Hindsight wrapper]
         SIM[simulator.py<br/>simulated engineer]
-        EVAL[evaluate.py<br/>3-condition benchmark]
+        EVAL[evaluate.py<br/>4-condition benchmark]
     end
 
     subgraph DATA["data/ (simulated world)"]
-        HIST[28 resolved incidents]
-        EVALS[20 unresolved eval incidents]
+        HIST[32 resolved incidents]
+        EVALS[25 unresolved eval incidents]
         LOGS[log extracts]
         DEPLOYS[deploy history]
         METRICS[metric snapshots]
@@ -134,11 +134,11 @@ wanted.
 
 ## Benchmark design
 
-`python -m oncall.evaluate` runs the same 20 eval incidents in four conditions,
+`python -m oncall.evaluate` runs the same 25 eval incidents in four conditions,
 each on a **fresh bank** (`oncall-eval-<run>-<condition>`), never the demo bank:
 
 - **A `A_off`** — memory disabled; recall is never called.
-- **B `B_seeded`** — the 28 history incidents are seeded, outcomes are not written
+- **B `B_seeded`** — the 32 history incidents are seeded, outcomes are not written
   back.
 - **C `C_learning`** — seeded, and after every incident the simulated engineer's
   attempted fixes (failed ones included) are retained as outcomes.
@@ -166,9 +166,24 @@ CSV/JSON/PNG land in `reports/`. Banks are deleted afterwards unless
 
 `scripts/generate_data.py` is the single source of truth: logs, deploys, metrics
 and incidents are generated from the same family templates, and
-`python scripts/validate_data.py` re-checks the invariants for all 48 incidents
+`python scripts/validate_data.py` re-checks the invariants for all 57 incidents
 and prints PASS/FAIL (log exists and contains the family signature, referenced
 deploy exists and predates the alert, metrics snapshots are time-ordered,
 history has exactly one working fix, eval records carry no resolution, the
-pattern detector reproduces the stored family, no fix-vocabulary id leaks into
-agent-visible text).
+pattern detector reproduces the stored family for every eval incident, no
+fix-vocabulary id leaks into agent-visible text).
+
+### Designed ambiguity
+
+Five eval incidents (`INC-122`…`INC-126`) deliberately contradict the fix their
+own logs suggest: the same Redis pool exhaustion is fixed by raising the pool on
+`checkout-service` but by rolling back on `search-service`; a payments leak is
+absorbed rather than rolled back; a slow query is answered by rolling the
+migration back instead of indexing. In every case the deciding fact — an audit
+freeze, a settlement batch in flight, a backfill still running, a shared cluster
+at `maxclients` — is recorded **only** in an earlier postmortem (`INC-029`…
+`INC-032`), never in the alert, symptoms, log extract or deploy summary. So the
+incident is ambiguous for a reader without memory and decidable with it, and the
+recall gate has to keep working for that to hold: a per-eval-incident
+`detect_pattern` check fails the validator if one of them drifts into another
+family.

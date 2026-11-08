@@ -54,28 +54,62 @@ uses scores only to order groups when present. It never invents a score.
   `resolved_by=""`. Public `incidents_eval.json` has no `true_fix` field. The
   simulator-only answer map is stored separately in `incidents_eval_answers.json`
   and is loaded only by the benchmark; the agent never receives it.
-- **20 eval incidents** = 17 recurring patterns, 2 genuinely novel patterns
+- **25 eval incidents** = 22 recurring patterns, 2 genuinely novel patterns
   (Kafka consumer lag, signing-key rotation), plus **one repeat of the Kafka
   pattern** (`INC-121`). The repeat is marked `novel=false`: it is not in the
-  seeded history, but condition C can learn it from `INC-119`. It is the one
-  place where C can differ from B without changing the seeded families.
-- **History** is 28 incidents across the 5 required families. It contains three
+  seeded history, but condition C can learn it from `INC-119`. It remains the
+  clearest B-vs-C difference, because the five designed-ambiguity incidents are
+  already answerable from the seeded postmortems (they separate A from B, not B
+  from C).
+- **History** is 32 incidents across the 5 required families. It contains three
   explicit traps where restart fails and a specific fix works, plus
   `increase_pool_size` working once (`INC-009`) and failing later (`INC-019`) so
-  conflicting memory is real data, not a fixture.
+  conflicting memory is real data, not a fixture. `INC-029`–`INC-032` are
+  hand-written trails that record a constraint instead of a generic note (see
+  "Dataset design and freeze").
 - **Simulated minutes**: 6 base + 8 per failed attempt. The numbers in the CSV
   are computed from attempts, not hand-entered.
 - **Banks**: demo bank comes from `HINDSIGHT_BANK_ID`; the benchmark refuses to
   use that ID and creates `oncall-eval-<run>-<condition>` banks, deleting them at
   the end unless `--keep-bank`.
 
+## Dataset design and freeze
+
+- **Authored, not captured.** The world in `data/` is simulated: services,
+  deploys, logs, metrics and incidents are generated from hand-written family
+  templates by `scripts/generate_data.py`, and the answers live in
+  `data/incidents_eval_answers.json`, which the agent never reads. No figure in
+  this repository comes from a real production system.
+- **Ambiguity is deliberate, and the constraint lives only in history.**
+  `INC-122`–`INC-126` were designed so that the fix their own logs suggest is
+  wrong: a PCI audit freeze that forbids rolling the release back (`INC-029`), a
+  settlement batch that must not be replayed (`INC-030`), an index that blocks
+  writes while a backfill runs (`INC-031`), a shared Redis cluster at
+  `maxclients` (`INC-032`). The alert, symptoms, log extract and deploy summary
+  never state the constraint; the earlier postmortem does. The logs still contain
+  the signature, so the incidents detect as their family and recall is not
+  filtered — the ambiguity is inside a family, not between families.
+- **Frozen before the first run.** The eval set and its answer map were authored
+  and frozen before any benchmark run used them. No incident, log line or answer
+  was edited after seeing results; the redesign in this section was committed
+  before the first run on the new set.
+- **Scoring was fixed in advance.** Top-1 is an exact id match against the single
+  hidden `true_fix`, and simulated minutes are computed from attempts (6 base + 8
+  per failure), never hand-entered. Neither the metric, the acceptable answers
+  nor the prompt were adjusted once results existed.
+- **The novel families stay novel.** `kafka_consumer_lag` and
+  `signing_key_rotation` have no history records at all, so for `INC-119`/`121`
+  and `INC-120` memory can only help through in-run learning (after `INC-119`),
+  never through seeding.
+
 ## Reliability choices
 
 - **Pattern gate.** `tools.detect_pattern` classifies the failure from distinctive
   strings in the alert/symptoms/logs (`data/families.json`). It is runbook-style
   keyword logic over visible evidence — **not** the incident's stored `family`
-  label. It reproduces the stored family for 48/48 generated incidents, which
-  `python scripts/validate_data.py` checks. Recall
+  label. It reproduces the stored family for 57/57 generated incidents, which
+  `python scripts/validate_data.py` checks, including per-eval-incident so a
+designed-ambiguity case cannot silently drift into a neighbouring family. Recall
   results from another pattern are dropped so a novel alert can honestly return
   "no relevant history" instead of citing a superficially similar old incident.
 - **Memory guardrail.** After LLM validation, fixes with recorded failures are

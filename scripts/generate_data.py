@@ -1,7 +1,7 @@
 """Generate the simulated production world, deterministically.
 
 Everything the agent can read is produced here from hand-written family
-templates: 28 resolved history incidents, 20 unresolved eval incidents,
+templates: 32 resolved history incidents, 25 unresolved eval incidents,
 matching deploy records, log files and metric snapshots. The bench and the UI
 both read the generated JSON, so a story only has to be consistent once.
 
@@ -144,7 +144,7 @@ FAMILIES = {
 }
 
 # --------------------------------------------------------------------------
-# History: 28 resolved incidents, Mar-Oct 2026
+# History: 32 resolved incidents, Mar-Oct 2026
 # --------------------------------------------------------------------------
 HISTORY_SPECS = [
     # -- Redis pool exhaustion ------------------------------------------------
@@ -254,10 +254,70 @@ HISTORY_SPECS = [
     dict(id="INC-028", family="payments_rate_limit", service="payments-service",
          opened_at="2026-10-14T14:03:00Z", severity="P1", resolved_by="dana",
          resolution_minutes=29, gateway="payments-gateway", retry_after=25),
+    # -- Designed ambiguity ---------------------------------------------------
+    # In each of the four incidents below the fix the log suggests is the wrong
+    # one, because of a team-specific constraint (an audit freeze, a batch in
+    # flight, a backfill still running, a shared cluster at maxclients). The
+    # constraint appears only in this postmortem: the later incidents with the
+    # same signature are answerable from memory and ambiguous without it.
+    dict(id="INC-029", family="redis_pool_exhaustion", service="checkout-service",
+         opened_at="2026-09-18T03:12:00Z", severity="P1", resolved_by="priya",
+         resolution_minutes=19, version="v2.49.2", previous="v2.48.7",
+         pool_old=60, pool_new=20, pool_waiting=24, deploy_offset_min=52,
+         deploy_summary="Mask cardholder data in cart logs (PCI-DSS)",
+         custom_fixes=[
+             {"fix": "restart_service", "outcome": "failed",
+              "note": "rolling restart completed; the pool was exhausted again within 4 min"},
+             {"fix": "rollback_deploy", "outcome": "failed",
+              "note": "change management refused the rollback: v2.49.2 carries the PCI-DSS masking patch and the release is frozen for the audit, so the deploy has to stay"},
+             {"fix": "increase_pool_size", "outcome": "worked",
+              "note": "raised the pool to 60; the waiting queue drained and p95 returned to 300ms. Team rule since: raise the pool on this service, never roll back a PCI release"},
+         ]),
+    dict(id="INC-030", family="memory_leak", service="payments-service",
+         opened_at="2026-10-02T04:46:00Z", severity="P2", resolved_by="dana",
+         resolution_minutes=38, version="v2.16.4", previous="v2.15.9",
+         leak_rate=44, deploy_offset_min=57,
+         deploy_summary="Cache settlement reconciliation windows in memory",
+         root_cause=("Leak in v2.16.4: the reconciliation cache holds every settlement "
+                     "window in memory until the batch finishes, so RSS grows ~44 MiB/min "
+                     "and only recovers when the run ends."),
+         custom_fixes=[
+             {"fix": "restart_service", "outcome": "failed",
+              "note": "restart freed memory for 9 min, then RSS climbed at the same rate"},
+             {"fix": "rollback_deploy", "outcome": "failed",
+              "note": "rollback refused while the settlement batch was running: replaying it would risk duplicate payouts, so the batch has to finish first"},
+             {"fix": "scale_up", "outcome": "worked",
+              "note": "added 4 replicas and raised the memory limit to 2048MiB; the batch completed and the leak stayed inside limits for 3 days. Accepted trade-off on this service: absorb it, do not roll back mid-settlement"},
+         ]),
+    dict(id="INC-031", family="slow_query_migration", service="orders-db",
+         opened_at="2026-09-05T07:19:00Z", severity="P1", resolved_by="ravi",
+         resolution_minutes=55, migration="0069_orders_settlement_window",
+         table="orders", column="settlement_window", backfill_pct=78,
+         custom_fixes=[
+             {"fix": "restart_service", "outcome": "failed",
+              "note": "restarted the app tier; lock waits continued because the backfill kept running"},
+             {"fix": "add_db_index", "outcome": "failed",
+              "note": "CREATE INDEX waited on ShareLock behind the in-flight backfill and blocked writes for 11 min until it was cancelled"},
+             {"fix": "rollback_deploy", "outcome": "worked",
+              "note": "rolled the migration back mid-backfill; lock waits cleared and writes recovered. House rule: roll back while a backfill runs, add the index after it finishes"},
+         ]),
+    dict(id="INC-032", family="redis_pool_exhaustion", service="search-service",
+         opened_at="2026-09-22T11:38:00Z", severity="P2", resolved_by="alice",
+         resolution_minutes=27, version="v6.4.2", previous="v6.3.4",
+         pool_old=60, pool_new=40, pool_waiting=22, deploy_offset_min=36,
+         deploy_summary="Add facet caching for search",
+         custom_fixes=[
+             {"fix": "restart_service", "outcome": "failed",
+              "note": "restarted the pods; the waiting queue rebuilt within 6 min"},
+             {"fix": "increase_pool_size", "outcome": "failed",
+              "note": "raised the pool to 80; the shared Redis cluster hit maxclients=100 and evicted seven other tenants' clients, so the raise was reverted"},
+             {"fix": "rollback_deploy", "outcome": "worked",
+              "note": "rolled back to v6.3.4; the pool returned to 60 connections and the evictions stopped. This service shares a Redis cluster and must not raise its pool"},
+         ]),
 ]
 
 # --------------------------------------------------------------------------
-# Eval: 20 unresolved incidents (18 recurring + 2 novel), never seeded
+# Eval: 25 unresolved incidents (22 recurring + 2 novel + 1 repeat), never seeded
 # --------------------------------------------------------------------------
 EVAL_SPECS = [
     dict(id="INC-101", family="redis_pool_exhaustion", service="checkout-service",
@@ -323,6 +383,36 @@ EVAL_SPECS = [
     dict(id="INC-121", family="kafka_consumer_lag", service="search-service",
          opened_at="2026-11-06T07:14:00Z", true_fix="scale_up",
          lag=221880),
+    # Each incident below has the same log signature as a family the team has
+    # already handled; the log points at the usual fix and the truth is the
+    # exception recorded in INC-029..INC-032. Nothing visible states the
+    # constraint: no PCI mention, no settlement, no maxclients, no house rule.
+    dict(id="INC-122", family="redis_pool_exhaustion", service="checkout-service",
+         opened_at="2026-11-07T02:14:00Z", true_fix="increase_pool_size",
+         version="v2.52.0", previous="v2.51.6", pool_old=60, pool_new=20,
+         pool_waiting=31, deploy_offset_min=38,
+         deploy_summary="Mask cardholder data in cart logs (PCI-DSS)"),
+    dict(id="INC-123", family="redis_pool_exhaustion", service="auth-service",
+         opened_at="2026-11-07T08:37:00Z", true_fix="rollback_deploy_and_increase_pool",
+         version="v4.12.0", previous="v4.11.3", pool_old=60, pool_new=60,
+         pool_waiting=44, deploy_offset_min=41,
+         deploy_summary="Verify tokens with synchronous JWKS fetch"),
+    dict(id="INC-124", family="memory_leak", service="payments-service",
+         opened_at="2026-11-07T14:09:00Z", true_fix="scale_up",
+         version="v2.23.0", previous="v2.22.1", leak_rate=61, mem_start_mb=1480,
+         deploy_offset_min=52,
+         deploy_summary="Batch settlement reconciliations in memory"),
+    dict(id="INC-125", family="slow_query_migration", service="orders-db",
+         opened_at="2026-11-07T20:26:00Z", true_fix="rollback_deploy",
+         migration="0086_orders_checkout_session", table="orders",
+         column="checkout_session_id", backfill_pct=62, query_ms="9127.884"),
+    dict(id="INC-126", family="redis_pool_exhaustion", service="search-service",
+         opened_at="2026-11-08T01:52:00Z", true_fix="rollback_deploy",
+         version="v6.7.0", previous="v6.6.3", pool_old=60, pool_new=40,
+         pool_waiting=26, deploy_offset_min=34,
+         deploy_summary="Add facet caching for search",
+         extra_lines=[{"minute": -1.1, "level": "WARN",
+                       "message": "redis maxclients 100 reached; client evictions=7"}]),
 ]
 
 # Unrelated deploys (red herrings + background noise) -----------------------
@@ -422,6 +512,10 @@ def _target_pool(spec: dict) -> int:
 
 
 def _deploy_summary(spec: dict) -> str:
+    if spec.get("deploy_summary"):
+        # Story-specific wording, so a deploy can precede an incident without
+        # naming the mechanism behind it (see the designed-ambiguity incidents).
+        return spec["deploy_summary"]
     family = spec["family"]
     if family == "redis_pool_exhaustion":
         return f"Reduce Redis pool default from {spec.get('pool_old')} to {spec.get('pool_new')} connections"
@@ -467,8 +561,9 @@ def make_logs(inc: dict) -> str:
         add(-6.4, "INFO", f"starting {service} version {version} (commit {_commit_for(inc['id'])})")
     if family == "redis_pool_exhaustion":
         pool = inc.get("pool_size", inc.get("pool_new", 20))
+        waiting = inc.get("pool_waiting", rng.randint(14, 37))
         add(-6.1, "INFO", f"redis pool initialised size={pool} min_idle=2 timeout=2000ms")
-        add(-3.4, "WARN", f"redis pool exhausted active={pool} idle=0 waiting={rng.randint(14, 37)}")
+        add(-3.4, "WARN", f"redis pool exhausted active={pool} idle=0 waiting={waiting}")
         add(-2.7, "ERROR", "ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)")
         if runtime.startswith("Node"):
             add(-2.2, "ERROR", f"GET /api/checkout 504 4123ms request_id=req_{rng.randint(10000,99999)}")
@@ -477,13 +572,17 @@ def make_logs(inc: dict) -> str:
         elif runtime.startswith("Go"):
             add(-2.0, "ERROR", f"redis: ConnectionPoolTimeoutError: timeout waiting for connection from pool pool_size={pool}")
             add(-0.9, "ERROR", f"POST /v1/session/refresh 503 latency=2.001s trace={_commit_for(inc['id'] + 't')}")
+        elif runtime.startswith("Java"):
+            add(-2.4, "ERROR", "ConnectionPoolTimeoutError: Timeout waiting for connection from pool")
+            add(-1.3, "ERROR", "facet cache read failed: redis timeout elapsed=2.01s")
         else:
             add(-2.4, "ERROR", "ConnectionPoolTimeoutError: Timeout waiting for connection from pool")
             add(-1.3, "ERROR", f"POST /v1/charges 503 provider=redis-cache elapsed=2.01s")
             add(0.2, "WARN", "retry 1/2 after redis timeout")
     elif family == "memory_leak":
         limit = {"checkout-service": 2048, "search-service": 4096, "payments-service": 1536}.get(service, 2048)
-        add(-5.6, "WARN", f"container memory {int(limit*0.92)}MiB / limit {limit}MiB rss_growth=+{inc.get('leak_rate', 40)}MiB/min")
+        used = inc.get("mem_start_mb", int(limit * 0.92))
+        add(-5.6, "WARN", f"container memory {used}MiB / limit {limit}MiB rss_growth=+{inc.get('leak_rate', 40)}MiB/min")
         add(-4.2, "ERROR", f"kubelet: container {service} restarted: OOMKilled (exit code 137)")
         add(-3.3, "INFO", f"probe /healthz ok after restart; memory now {int(limit*0.35)}MiB")
         add(-1.8, "WARN", f"memory climbing again: {int(limit*0.78)}MiB rss_growth=+{inc.get('leak_rate', 40)}MiB/min")
@@ -508,9 +607,12 @@ def make_logs(inc: dict) -> str:
         column = inc.get("column", "customer_id")
         migration = inc.get("migration", "0000")
         is_db = runtime.startswith("PostgreSQL")
-        add(-5.9, "INFO", f"applied migration-{migration[:4]} ({migration}); backfill complete")
+        pct = inc.get("backfill_pct")
+        backfill = f"backfill {pct}% complete" if pct is not None else "backfill complete"
+        add(-5.9, "INFO", f"applied migration-{migration[:4]} ({migration}); {backfill}")
+        query_ms = inc.get("query_ms", "8421.331")
         if is_db:
-            add(-4.6, "LOG", f"duration: 8421.331 ms  statement: SELECT id, status, total FROM {table} WHERE {column.split(',')[0]} = $1 ORDER BY created_at DESC LIMIT 20")
+            add(-4.6, "LOG", f"duration: {query_ms} ms  statement: SELECT id, status, total FROM {table} WHERE {column.split(',')[0]} = $1 ORDER BY created_at DESC LIMIT 20")
             add(-3.9, "LOG", f"process {rng.randint(18000,19000)} still waiting for ShareLock on transaction {rng.randint(80000,90000)} after 1000.219 ms")
             add(-3.1, "ERROR", "canceling statement due to lock timeout")
             add(-2.9, "STATEMENT", f"UPDATE {table} SET status = 'paid', updated_at = now() WHERE id = $1")
@@ -545,6 +647,9 @@ def make_logs(inc: dict) -> str:
         add(-3.1, "WARN", "jwt verify failed for issuer https://sso.internal (unknown kid)")
         add(-1.6, "ERROR", "401 rate above threshold: 62% of /v1/session/verify")
         add(0.5, "ERROR", f"token exchange rejected: invalid_client (kid={kid})")
+
+    for extra in inc.get("extra_lines", []):
+        add(float(extra["minute"]), extra["level"], extra["message"])
 
     lines.sort(key=lambda x: x[0])
     header = [
@@ -682,6 +787,10 @@ def build_alert(spec: dict) -> str:
 
 def build_fixes(spec: dict) -> list[dict]:
     """Compose the fixes tried, in the order the engineer tried them."""
+    if spec.get("custom_fixes"):
+        # Hand-written trail for incidents whose story (a compliance freeze, a
+        # batch still in flight) cannot be expressed with the generic notes.
+        return [dict(item) for item in spec["custom_fixes"]]
     f = spec["family"]
     outcome = spec.get("outcome")
     rng = random.Random(spec["id"] + "fixes")
@@ -742,7 +851,7 @@ def build_incident(spec: dict, deploy_id: str | None, *, eval_mode: bool) -> dic
         "symptoms": build_symptoms(spec),
         "severity": spec.get("severity", "P1" if spec["family"] in {"expired_tls_cert", "slow_query_migration"} else "P2"),
         "status": "open" if eval_mode else "resolved",
-        "root_cause": "" if eval_mode else build_root_cause(spec),
+        "root_cause": "" if eval_mode else (spec.get("root_cause") or build_root_cause(spec)),
         "fixes_tried": [] if eval_mode else build_fixes(spec),
         "resolution_minutes": 0 if eval_mode else spec.get("resolution_minutes", 30),
         "resolved_by": "" if eval_mode else spec.get("resolved_by", ""),

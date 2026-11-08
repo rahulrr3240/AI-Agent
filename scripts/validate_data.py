@@ -73,13 +73,17 @@ def main(argv: list[str] | None = None) -> int:
           f"{len(deploys)} deploys, {len(families)} families\n")
 
     # --- shape -------------------------------------------------------------
+    v.check("families: 7 families with a signature and keywords",
+            len(families) == 7 and all(
+                meta.get("signature") and meta.get("keywords") for meta in families.values()))
+
     v.check("services: 5 records with owner, runtime and SLOs",
             len(services) == 5 and all(
                 s.team and s.runtime and s.primary_oncall and s.slo_p95_ms > 0
                 and s.slo_error_rate_pct > 0 for s in services.values()))
 
-    v.check("history: 28 resolved incidents covering the 5 seeded families",
-            len(history) == 28 and {h["family"] for h in history} >= {
+    v.check("history: 32 resolved incidents covering the 5 seeded families",
+            len(history) == 32 and {h["family"] for h in history} >= {
                 "redis_pool_exhaustion", "memory_leak", "expired_tls_cert",
                 "slow_query_migration", "payments_rate_limit"}
             and {h["family"] for h in history} <= set(families))
@@ -114,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"{inc.id}: status is {inc.status}")
         elif inc.root_cause or inc.fixes_tried or inc.resolved_by:
             problems.append(f"{inc.id}: carries a resolution")
-    v.group("eval: 20 open incidents with no root cause, fixes tried or resolver recorded",
+    v.group("eval: 25 open incidents with no root cause, fixes tried or resolver recorded",
             problems, len(evals))
 
     v.check("eval: exactly 2 incidents marked novel",
@@ -203,6 +207,22 @@ def main(argv: list[str] | None = None) -> int:
             problems.append(f"{raw['id']}: detected {detected!r}, stored {raw['family']!r}")
     v.group("pattern detection over alert+symptoms+log matches the stored family for every incident",
             problems, len(records))
+
+    # --- the eval set on its own ------------------------------------------
+    # Several eval incidents are deliberately ambiguous: the constraint that
+    # picks the right fix is recorded only inside a past postmortem. If one of
+    # them stopped detecting as its own family, the recall gate would drop the
+    # history that resolves it and the incident would silently become unsolvable.
+    problems = []
+    for raw in evals:
+        log_path = ROOT / raw["log_file"]
+        text = " ".join([raw["alert"], *raw.get("symptoms", []),
+                         log_path.read_text(encoding="utf-8") if log_path.exists() else ""])
+        detected, _score = detect_pattern(text, families)
+        if detected != raw["family"]:
+            problems.append(f"{raw['id']}: detected {detected!r}, stored {raw['family']!r}")
+    v.group("eval: pattern detection matches the stored family for every eval incident",
+            problems, len(evals))
 
     # --- the demo's headline claim ----------------------------------------
     traps = [raw for raw in history

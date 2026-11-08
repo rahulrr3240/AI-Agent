@@ -160,7 +160,7 @@ Results are produced by `python -m oncall.evaluate`, shown in the app's Learning
 ### Conditions
 
 - **A · memory OFF** — the pipeline without recall; the control.
-- **B · seeded** — recall over the 28 resolved history incidents.
+- **B · seeded** — recall over the 32 resolved history incidents.
 - **C · seeded + learning** — seeded, and each simulated resolution is written
   back so later incidents can recall it.
 - **D · cold start** — memory ON with a **fresh empty bank**: nothing is seeded,
@@ -215,7 +215,7 @@ cp .env.example .env            # then edit .env (Windows: copy .env.example .en
 # 3. verify both services (retain+recall round trip, validated JSON)
 python scripts/check_connections.py
 
-# 4. load the 28 resolved history incidents into the bank
+# 4. load the 32 resolved history incidents into the bank
 python scripts/seed_memory.py
 
 # 5. run the UI
@@ -307,12 +307,12 @@ oncall/
   evaluate.py              3-condition benchmark, pacing, CSV/JSON/chart
 data/
   services.json            5 services with owners, runtimes, dependencies, SLOs
-  incidents_history.json   28 resolved incidents (5 families)
-  incidents_eval.json      20 unresolved incidents, hidden true_fix
-  deploys.json             48 deploy records consistent with the incidents
+  incidents_history.json   32 resolved incidents (5 families)
+  incidents_eval.json      25 unresolved incidents, hidden true_fix
+  deploys.json             57 deploy records consistent with the incidents
   families.json            signature strings + keywords for pattern detection
-  logs/                    48 per-incident log extracts
-  metrics/                 48 per-incident metric snapshots
+  logs/                    57 per-incident log extracts
+  metrics/                 57 per-incident metric snapshots
 scripts/
   generate_data.py         deterministic world generator
   validate_data.py         PASS/FAIL data-consistency checks (not a test suite)
@@ -334,18 +334,28 @@ set:
 
 | Family | Signature | What actually works |
 |---|---|---|
-| Redis pool exhaustion after deploy | `ConnectionPoolTimeoutError` | rollback + raise pool size |
-| Memory leak in a release | `OOMKilled`, RSS growth | rollback |
+| Redis pool exhaustion after deploy | `ConnectionPoolTimeoutError` | raise the pool, or roll back + raise it (see below) |
+| Memory leak in a release | `OOMKilled`, RSS growth | roll back — unless a batch is in flight |
 | Expired TLS certificate | `x509: certificate has expired` | renew + reload (restart/rollback fail) |
-| Slow query after migration | `canceling statement due to lock timeout` | add the missing index |
+| Slow query after migration | `canceling statement due to lock timeout` | add the index — roll back if a backfill is running |
 | Third-party rate limiting | `429 Too Many Requests` | backoff + circuit breaker |
 | Kafka consumer lag *(no seeded history)* | `consumer group lag` | scale consumers |
 | Signing-key rotation *(no seeded history)* | `invalid_client` | roll back the rotation |
 
+The "what works" column is the *usual* answer, not a rule. Five eval incidents
+(`INC-122`–`INC-126`) are built so the logs point at that answer while a
+team-specific constraint makes it wrong: an audit freeze that forbids rolling a
+PCI release back, a settlement batch that must not be replayed, a backfill still
+running, and a shared Redis cluster at `maxclients`. The constraint is recorded
+only in an earlier postmortem (`INC-029`–`INC-032`), never in the alert, the
+symptoms, the log extract or the deploy summary — so those incidents are
+ambiguous without memory and decidable with it.
+
 Data is generated from hand-written templates, then checked by
 `python scripts/validate_data.py`: for every incident the log exists and contains the family signature, the referenced deploy
 exists and predates the alert, metric snapshots are ordered, history has exactly
-one working fix, and eval records never contain the answer.
+one working fix, eval records never contain the answer, and every eval incident
+still detects as its own family (if one drifts, recall would drop its history).
 
 ## Reliability
 
@@ -372,7 +382,7 @@ The LLM is the unreliable part, so every path has a fallback:
   ranked. No model weights are updated.
 - **Keyword pattern gate.** Recall precision relies on distinctive error strings
   in `data/families.json`. A real deployment would need a richer classifier, but
-  the gate is transparent and its 48/48 result on the generated data is checked
+  the gate is transparent and its 57/57 result on the generated data is checked
   by `scripts/validate_data.py`.
 - **Benchmark scope.** 20 incidents is a demo-sized evaluation, not statistical
   proof. The seed and simulated engineer are synthetic. Half the benchmark runs
