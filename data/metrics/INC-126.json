@@ -1,0 +1,117 @@
+{
+  "incident_id": "INC-126",
+  "service": "search-service",
+  "summary": {
+    "window_minutes": 12,
+    "peak_p95_ms": 5055,
+    "peak_error_rate_pct": 18.38,
+    "service": "search-service",
+    "family": "redis_pool_exhaustion"
+  },
+  "series": [
+    {
+      "t": "2026-11-08T01:46:00Z",
+      "p95_latency_ms": 547,
+      "error_rate_pct": 0.38,
+      "cpu_pct": 31.1,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:47:00Z",
+      "p95_latency_ms": 551,
+      "error_rate_pct": 0.25,
+      "cpu_pct": 33.8,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:48:00Z",
+      "p95_latency_ms": 559,
+      "error_rate_pct": 0.34,
+      "cpu_pct": 33.9,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:49:00Z",
+      "p95_latency_ms": 577,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 33.2,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:50:00Z",
+      "p95_latency_ms": 543,
+      "error_rate_pct": 0.22,
+      "cpu_pct": 28.8,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:51:00Z",
+      "p95_latency_ms": 552,
+      "error_rate_pct": 0.33,
+      "cpu_pct": 31.8,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    },
+    {
+      "t": "2026-11-08T01:52:00Z",
+      "p95_latency_ms": 4147,
+      "error_rate_pct": 14.7,
+      "cpu_pct": 73.8,
+      "redis_pool_waiting": 19,
+      "redis_pool_in_use": 36
+    },
+    {
+      "t": "2026-11-08T01:53:00Z",
+      "p95_latency_ms": 5055,
+      "error_rate_pct": 18.38,
+      "cpu_pct": 85.7,
+      "redis_pool_waiting": 41,
+      "redis_pool_in_use": 40
+    },
+    {
+      "t": "2026-11-08T01:54:00Z",
+      "p95_latency_ms": 4168,
+      "error_rate_pct": 14.73,
+      "cpu_pct": 77.3,
+      "redis_pool_waiting": 23,
+      "redis_pool_in_use": 36
+    },
+    {
+      "t": "2026-11-08T01:55:00Z",
+      "p95_latency_ms": 3231,
+      "error_rate_pct": 11.08,
+      "cpu_pct": 62.9,
+      "redis_pool_waiting": 16,
+      "redis_pool_in_use": 33
+    },
+    {
+      "t": "2026-11-08T01:56:00Z",
+      "p95_latency_ms": 2338,
+      "error_rate_pct": 7.41,
+      "cpu_pct": 50.8,
+      "redis_pool_waiting": 16,
+      "redis_pool_in_use": 30
+    },
+    {
+      "t": "2026-11-08T01:57:00Z",
+      "p95_latency_ms": 1470,
+      "error_rate_pct": 3.86,
+      "cpu_pct": 44.4,
+      "redis_pool_waiting": 7,
+      "redis_pool_in_use": 27
+    },
+    {
+      "t": "2026-11-08T01:58:00Z",
+      "p95_latency_ms": 548,
+      "error_rate_pct": 0.28,
+      "cpu_pct": 29.8,
+      "redis_pool_waiting": 0,
+      "redis_pool_in_use": 24
+    }
+  ]
+}

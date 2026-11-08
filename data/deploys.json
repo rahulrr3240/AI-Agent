@@ -232,6 +232,16 @@
     },
     {
       "id": "DEP-0024",
+      "service": "orders-db",
+      "version": "migration-0069",
+      "deployed_at": "2026-09-05T06:34:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0069_orders_settlement_window: add column and backfill orders",
+      "commit": "a9fcbee",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0025",
       "service": "checkout-service",
       "version": "v2.41.0",
       "deployed_at": "2026-09-10T14:30:00Z",
@@ -241,7 +251,7 @@
       "previous_version": "v2.40.3"
     },
     {
-      "id": "DEP-0025",
+      "id": "DEP-0026",
       "service": "orders-db",
       "version": "migration-0074",
       "deployed_at": "2026-09-12T04:34:00Z",
@@ -251,7 +261,27 @@
       "previous_version": null
     },
     {
-      "id": "DEP-0026",
+      "id": "DEP-0027",
+      "service": "checkout-service",
+      "version": "v2.49.2",
+      "deployed_at": "2026-09-18T02:20:00Z",
+      "deployed_by": "priya",
+      "summary": "Mask cardholder data in cart logs (PCI-DSS)",
+      "commit": "25e99b6",
+      "previous_version": "v2.48.7"
+    },
+    {
+      "id": "DEP-0028",
+      "service": "search-service",
+      "version": "v6.4.2",
+      "deployed_at": "2026-09-22T11:02:00Z",
+      "deployed_by": "alice",
+      "summary": "Add facet caching for search",
+      "commit": "0cfc641",
+      "previous_version": "v6.3.4"
+    },
+    {
+      "id": "DEP-0029",
       "service": "payments-service",
       "version": "v2.14.0",
       "deployed_at": "2026-09-24T03:21:00Z",
@@ -261,7 +291,17 @@
       "previous_version": "v2.13.6"
     },
     {
-      "id": "DEP-0027",
+      "id": "DEP-0030",
+      "service": "payments-service",
+      "version": "v2.16.4",
+      "deployed_at": "2026-10-02T03:49:00Z",
+      "deployed_by": "dana",
+      "summary": "Cache settlement reconciliation windows in memory",
+      "commit": "7303ada",
+      "previous_version": "v2.15.9"
+    },
+    {
+      "id": "DEP-0031",
       "service": "payments-service",
       "version": "v2.17.0",
       "deployed_at": "2026-10-08T07:48:00Z",
@@ -271,7 +311,7 @@
       "previous_version": "v2.16.2"
     },
     {
-      "id": "DEP-0028",
+      "id": "DEP-0032",
       "service": "orders-db",
       "version": "migration-0077",
       "deployed_at": "2026-10-11T02:00:00Z",
@@ -281,7 +321,7 @@
       "previous_version": "migration-0076"
     },
     {
-      "id": "DEP-0029",
+      "id": "DEP-0033",
       "service": "checkout-service",
       "version": "v2.44.0",
       "deployed_at": "2026-10-19T09:12:00Z",
@@ -291,7 +331,7 @@
       "previous_version": "v2.43.6"
     },
     {
-      "id": "DEP-0030",
+      "id": "DEP-0034",
       "service": "checkout-service",
       "version": "v2.44.1",
       "deployed_at": "2026-10-20T01:24:00Z",
@@ -301,7 +341,7 @@
       "previous_version": "v2.44.0"
     },
     {
-      "id": "DEP-0031",
+      "id": "DEP-0035",
       "service": "checkout-service",
       "version": "v2.44.2",
       "deployed_at": "2026-10-21T11:41:00Z",
@@ -311,7 +351,7 @@
       "previous_version": "v2.44.1"
     },
     {
-      "id": "DEP-0032",
+      "id": "DEP-0036",
       "service": "search-service",
       "version": "v6.4.0",
       "deployed_at": "2026-10-22T07:29:00Z",
@@ -321,7 +361,7 @@
       "previous_version": "v6.3.2"
     },
     {
-      "id": "DEP-0033",
+      "id": "DEP-0037",
       "service": "search-service",
       "version": "v6.4.1",
       "deployed_at": "2026-10-23T10:26:00Z",
@@ -331,7 +371,7 @@
       "previous_version": "v6.4.0"
     },
     {
-      "id": "DEP-0034",
+      "id": "DEP-0038",
       "service": "search-service",
       "version": "v6.5.9",
       "deployed_at": "2026-10-26T08:12:00Z",
@@ -341,7 +381,7 @@
       "previous_version": "v6.5.6"
     },
     {
-      "id": "DEP-0035",
+      "id": "DEP-0039",
       "service": "orders-db",
       "version": "migration-0079",
       "deployed_at": "2026-10-26T10:41:00Z",
@@ -351,7 +391,7 @@
       "previous_version": null
     },
     {
-      "id": "DEP-0036",
+      "id": "DEP-0040",
       "service": "orders-db",
       "version": "migration-0080",
       "deployed_at": "2026-10-27T02:00:00Z",
@@ -361,7 +401,7 @@
       "previous_version": "migration-0079"
     },
     {
-      "id": "DEP-0037",
+      "id": "DEP-0041",
       "service": "auth-service",
       "version": "v4.9.0",
       "deployed_at": "2026-10-29T08:47:00Z",
@@ -371,7 +411,7 @@
       "previous_version": "v4.8.1"
     },
     {
-      "id": "DEP-0038",
+      "id": "DEP-0042",
       "service": "payments-service",
       "version": "v2.19.0",
       "deployed_at": "2026-10-29T12:58:00Z",
@@ -381,7 +421,7 @@
       "previous_version": "v2.18.4"
     },
     {
-      "id": "DEP-0039",
+      "id": "DEP-0043",
       "service": "payments-service",
       "version": "v2.19.0",
       "deployed_at": "2026-11-01T12:59:00Z",
@@ -391,7 +431,7 @@
       "previous_version": "v2.18.4"
     },
     {
-      "id": "DEP-0040",
+      "id": "DEP-0044",
       "service": "orders-db",
       "version": "migration-0082",
       "deployed_at": "2026-11-03T02:43:00Z",
@@ -401,7 +441,7 @@
       "previous_version": null
     },
     {
-      "id": "DEP-0041",
+      "id": "DEP-0045",
       "service": "checkout-service",
       "version": "v2.46.0",
       "deployed_at": "2026-11-04T01:56:00Z",
@@ -411,7 +451,7 @@
       "previous_version": "v2.45.2"
     },
     {
-      "id": "DEP-0042",
+      "id": "DEP-0046",
       "service": "search-service",
       "version": "v6.6.1",
       "deployed_at": "2026-11-04T08:21:00Z",
@@ -421,7 +461,7 @@
       "previous_version": "v6.6.0"
     },
     {
-      "id": "DEP-0043",
+      "id": "DEP-0047",
       "service": "orders-db",
       "version": "migration-0084",
       "deployed_at": "2026-11-04T23:49:00Z",
@@ -431,7 +471,7 @@
       "previous_version": null
     },
     {
-      "id": "DEP-0044",
+      "id": "DEP-0048",
       "service": "orders-db",
       "version": "migration-0085",
       "deployed_at": "2026-11-05T02:00:00Z",
@@ -441,7 +481,7 @@
       "previous_version": "migration-0084"
     },
     {
-      "id": "DEP-0045",
+      "id": "DEP-0049",
       "service": "auth-service",
       "version": "v4.9.1",
       "deployed_at": "2026-11-05T22:38:00Z",
@@ -451,7 +491,7 @@
       "previous_version": "v4.9.0"
     },
     {
-      "id": "DEP-0046",
+      "id": "DEP-0050",
       "service": "payments-service",
       "version": "v2.21.0",
       "deployed_at": "2026-11-06T01:37:00Z",
@@ -461,7 +501,7 @@
       "previous_version": "v2.20.3"
     },
     {
-      "id": "DEP-0047",
+      "id": "DEP-0051",
       "service": "orders-db",
       "version": "migration-0087",
       "deployed_at": "2026-11-06T02:20:00Z",
@@ -471,7 +511,7 @@
       "previous_version": "migration-0086"
     },
     {
-      "id": "DEP-0048",
+      "id": "DEP-0052",
       "service": "checkout-service",
       "version": "v2.47.0",
       "deployed_at": "2026-11-06T03:26:00Z",
@@ -479,6 +519,56 @@
       "summary": "Rewrite response serialisation path; add in-memory response cache",
       "commit": "17522a4",
       "previous_version": "v2.46.1"
+    },
+    {
+      "id": "DEP-0053",
+      "service": "checkout-service",
+      "version": "v2.52.0",
+      "deployed_at": "2026-11-07T01:36:00Z",
+      "deployed_by": "priya",
+      "summary": "Mask cardholder data in cart logs (PCI-DSS)",
+      "commit": "7785ec7",
+      "previous_version": "v2.51.6"
+    },
+    {
+      "id": "DEP-0054",
+      "service": "auth-service",
+      "version": "v4.12.0",
+      "deployed_at": "2026-11-07T07:56:00Z",
+      "deployed_by": "priya",
+      "summary": "Verify tokens with synchronous JWKS fetch",
+      "commit": "0d27193",
+      "previous_version": "v4.11.3"
+    },
+    {
+      "id": "DEP-0055",
+      "service": "payments-service",
+      "version": "v2.23.0",
+      "deployed_at": "2026-11-07T13:17:00Z",
+      "deployed_by": "priya",
+      "summary": "Batch settlement reconciliations in memory",
+      "commit": "b6092a8",
+      "previous_version": "v2.22.1"
+    },
+    {
+      "id": "DEP-0056",
+      "service": "orders-db",
+      "version": "migration-0086",
+      "deployed_at": "2026-11-07T19:41:00Z",
+      "deployed_by": "ravi",
+      "summary": "Migration 0086_orders_checkout_session: add column and backfill orders",
+      "commit": "f17afed",
+      "previous_version": null
+    },
+    {
+      "id": "DEP-0057",
+      "service": "search-service",
+      "version": "v6.7.0",
+      "deployed_at": "2026-11-08T01:18:00Z",
+      "deployed_by": "priya",
+      "summary": "Add facet caching for search",
+      "commit": "234462f",
+      "previous_version": "v6.6.3"
     }
   ]
 }

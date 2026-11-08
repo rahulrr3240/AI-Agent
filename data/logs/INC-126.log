@@ -1,0 +1,9 @@
+# simulated log extract — INC-126 — search-service (Java 21)
+# window: 2026-11-08T01:45:00Z .. 2026-11-08T01:54:00Z
+2026-11-08 01:45:36.000 INFO  [ search-service ] [http-nio-8080-exec-5] c.v.search.SearchController - starting search-service version v6.7.0 (commit 234462f)
+2026-11-08 01:45:54.000 INFO  [ search-service ] [http-nio-8080-exec-2] c.v.search.SearchController - redis pool initialised size=40 min_idle=2 timeout=2000ms
+2026-11-08 01:48:36.000 WARN  [ search-service ] [http-nio-8080-exec-9] c.v.search.SearchController - redis pool exhausted active=40 idle=0 waiting=26
+2026-11-08 01:49:18.000 ERROR [ search-service ] [http-nio-8080-exec-9] c.v.search.SearchController - ConnectionPoolTimeoutError: Timeout waiting for connection from pool (2000ms)
+2026-11-08 01:49:36.000 ERROR [ search-service ] [http-nio-8080-exec-7] c.v.search.SearchController - ConnectionPoolTimeoutError: Timeout waiting for connection from pool
+2026-11-08 01:50:42.000 ERROR [ search-service ] [http-nio-8080-exec-7] c.v.search.SearchController - facet cache read failed: redis timeout elapsed=2.01s
+2026-11-08 01:50:54.000 WARN  [ search-service ] [http-nio-8080-exec-9] c.v.search.SearchController - redis maxclients 100 reached; client evictions=7

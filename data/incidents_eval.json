@@ -17,7 +17,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0030",
+      "related_deploy_id": "DEP-0034",
       "log_file": "data/logs/INC-101.log",
       "metrics_file": "data/metrics/INC-101.json",
       "tags": [
@@ -43,7 +43,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0032",
+      "related_deploy_id": "DEP-0036",
       "log_file": "data/logs/INC-102.log",
       "metrics_file": "data/metrics/INC-102.json",
       "tags": [
@@ -95,7 +95,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0035",
+      "related_deploy_id": "DEP-0039",
       "log_file": "data/logs/INC-104.log",
       "metrics_file": "data/metrics/INC-104.json",
       "tags": [
@@ -173,7 +173,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0039",
+      "related_deploy_id": "DEP-0043",
       "log_file": "data/logs/INC-107.log",
       "metrics_file": "data/metrics/INC-107.json",
       "tags": [
@@ -225,7 +225,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0040",
+      "related_deploy_id": "DEP-0044",
       "log_file": "data/logs/INC-109.log",
       "metrics_file": "data/metrics/INC-109.json",
       "tags": [
@@ -277,7 +277,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0041",
+      "related_deploy_id": "DEP-0045",
       "log_file": "data/logs/INC-111.log",
       "metrics_file": "data/metrics/INC-111.json",
       "tags": [
@@ -303,7 +303,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0042",
+      "related_deploy_id": "DEP-0046",
       "log_file": "data/logs/INC-112.log",
       "metrics_file": "data/metrics/INC-112.json",
       "tags": [
@@ -329,7 +329,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0043",
+      "related_deploy_id": "DEP-0047",
       "log_file": "data/logs/INC-113.log",
       "metrics_file": "data/metrics/INC-113.json",
       "tags": [
@@ -407,7 +407,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0046",
+      "related_deploy_id": "DEP-0050",
       "log_file": "data/logs/INC-116.log",
       "metrics_file": "data/metrics/INC-116.json",
       "tags": [
@@ -433,7 +433,7 @@
       "fixes_tried": [],
       "resolution_minutes": 0,
       "resolved_by": "",
-      "related_deploy_id": "DEP-0048",
+      "related_deploy_id": "DEP-0052",
       "log_file": "data/logs/INC-117.log",
       "metrics_file": "data/metrics/INC-117.json",
       "tags": [
@@ -513,6 +513,136 @@
       "metrics_file": "data/metrics/INC-121.json",
       "tags": [
         "kafka_consumer_lag",
+        "search-service"
+      ],
+      "novel": false
+    },
+    {
+      "id": "INC-122",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-11-07T02:14:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0053",
+      "log_file": "data/logs/INC-122.log",
+      "metrics_file": "data/metrics/INC-122.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ],
+      "novel": false
+    },
+    {
+      "id": "INC-123",
+      "family": "redis_pool_exhaustion",
+      "service": "auth-service",
+      "opened_at": "2026-11-07T08:37:00Z",
+      "alert": "auth-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 2.8s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0054",
+      "log_file": "data/logs/INC-123.log",
+      "metrics_file": "data/metrics/INC-123.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "auth-service"
+      ],
+      "novel": false
+    },
+    {
+      "id": "INC-124",
+      "family": "memory_leak",
+      "service": "payments-service",
+      "opened_at": "2026-11-07T14:09:00Z",
+      "alert": "payments-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on payments-service"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0055",
+      "log_file": "data/logs/INC-124.log",
+      "metrics_file": "data/metrics/INC-124.json",
+      "tags": [
+        "memory_leak",
+        "payments-service"
+      ],
+      "novel": false
+    },
+    {
+      "id": "INC-125",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-11-07T20:26:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0056",
+      "log_file": "data/logs/INC-125.log",
+      "metrics_file": "data/metrics/INC-125.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ],
+      "novel": false
+    },
+    {
+      "id": "INC-126",
+      "family": "redis_pool_exhaustion",
+      "service": "search-service",
+      "opened_at": "2026-11-08T01:52:00Z",
+      "alert": "search-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 5.2s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "open",
+      "root_cause": "",
+      "fixes_tried": [],
+      "resolution_minutes": 0,
+      "resolved_by": "",
+      "related_deploy_id": "DEP-0057",
+      "log_file": "data/logs/INC-126.log",
+      "metrics_file": "data/metrics/INC-126.json",
+      "tags": [
+        "redis_pool_exhaustion",
         "search-service"
       ],
       "novel": false

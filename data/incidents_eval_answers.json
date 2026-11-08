@@ -19,6 +19,11 @@
     "INC-117": "rollback_deploy",
     "INC-119": "scale_up",
     "INC-120": "rollback_secret_rotation",
-    "INC-121": "scale_up"
+    "INC-121": "scale_up",
+    "INC-122": "increase_pool_size",
+    "INC-123": "rollback_deploy_and_increase_pool",
+    "INC-124": "scale_up",
+    "INC-125": "rollback_deploy",
+    "INC-126": "rollback_deploy"
   }
 }

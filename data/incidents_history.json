@@ -439,7 +439,7 @@
       ],
       "resolution_minutes": 26,
       "resolved_by": "dana",
-      "related_deploy_id": "DEP-0026",
+      "related_deploy_id": "DEP-0029",
       "log_file": "data/logs/INC-026.log",
       "metrics_file": "data/metrics/INC-026.json",
       "tags": [
@@ -890,7 +890,7 @@
       ],
       "resolution_minutes": 47,
       "resolved_by": "ravi",
-      "related_deploy_id": "DEP-0025",
+      "related_deploy_id": "DEP-0026",
       "log_file": "data/logs/INC-025.log",
       "metrics_file": "data/metrics/INC-025.json",
       "tags": [
@@ -1076,6 +1076,170 @@
       "tags": [
         "payments_rate_limit",
         "payments-service"
+      ]
+    },
+    {
+      "id": "INC-029",
+      "family": "redis_pool_exhaustion",
+      "service": "checkout-service",
+      "opened_at": "2026-09-18T03:12:00Z",
+      "alert": "checkout-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 4.1s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v2.49.2 cut the pool from 60 to 20 while peak concurrency stayed around 69.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "rolling restart completed; the pool was exhausted again within 4 min"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "change management refused the rollback: v2.49.2 carries the PCI-DSS masking patch and the release is frozen for the audit, so the deploy has to stay"
+        },
+        {
+          "fix": "increase_pool_size",
+          "outcome": "worked",
+          "note": "raised the pool to 60; the waiting queue drained and p95 returned to 300ms. Team rule since: raise the pool on this service, never roll back a PCI release"
+        }
+      ],
+      "resolution_minutes": 19,
+      "resolved_by": "priya",
+      "related_deploy_id": "DEP-0027",
+      "log_file": "data/logs/INC-029.log",
+      "metrics_file": "data/metrics/INC-029.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "checkout-service"
+      ]
+    },
+    {
+      "id": "INC-030",
+      "family": "memory_leak",
+      "service": "payments-service",
+      "opened_at": "2026-10-02T04:46:00Z",
+      "alert": "payments-service pods OOMKilling repeatedly (restart count > 2 in 15m)",
+      "symptoms": [
+        "pods OOMKilled and restarting",
+        "RSS growing steadily since the release",
+        "memory near limit on payments-service"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Leak in v2.16.4: the reconciliation cache holds every settlement window in memory until the batch finishes, so RSS grows ~44 MiB/min and only recovers when the run ends.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restart freed memory for 9 min, then RSS climbed at the same rate"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "failed",
+          "note": "rollback refused while the settlement batch was running: replaying it would risk duplicate payouts, so the batch has to finish first"
+        },
+        {
+          "fix": "scale_up",
+          "outcome": "worked",
+          "note": "added 4 replicas and raised the memory limit to 2048MiB; the batch completed and the leak stayed inside limits for 3 days. Accepted trade-off on this service: absorb it, do not roll back mid-settlement"
+        }
+      ],
+      "resolution_minutes": 38,
+      "resolved_by": "dana",
+      "related_deploy_id": "DEP-0030",
+      "log_file": "data/logs/INC-030.log",
+      "metrics_file": "data/metrics/INC-030.json",
+      "tags": [
+        "memory_leak",
+        "payments-service"
+      ]
+    },
+    {
+      "id": "INC-031",
+      "family": "slow_query_migration",
+      "service": "orders-db",
+      "opened_at": "2026-09-05T07:19:00Z",
+      "alert": "orders-db query latency > 5s and DB CPU > 90% for 5m",
+      "symptoms": [
+        "database CPU saturated",
+        "lock waits climbing",
+        "query timeouts from upstream services"
+      ],
+      "severity": "P1",
+      "status": "resolved",
+      "root_cause": "Migration 0069_orders_settlement_window added a filter on orders(settlement_window) without an index; the planner falls back to a sequential scan and row locks pile up.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restarted the app tier; lock waits continued because the backfill kept running"
+        },
+        {
+          "fix": "add_db_index",
+          "outcome": "failed",
+          "note": "CREATE INDEX waited on ShareLock behind the in-flight backfill and blocked writes for 11 min until it was cancelled"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled the migration back mid-backfill; lock waits cleared and writes recovered. House rule: roll back while a backfill runs, add the index after it finishes"
+        }
+      ],
+      "resolution_minutes": 55,
+      "resolved_by": "ravi",
+      "related_deploy_id": "DEP-0024",
+      "log_file": "data/logs/INC-031.log",
+      "metrics_file": "data/metrics/INC-031.json",
+      "tags": [
+        "slow_query_migration",
+        "orders-db"
+      ]
+    },
+    {
+      "id": "INC-032",
+      "family": "redis_pool_exhaustion",
+      "service": "search-service",
+      "opened_at": "2026-09-22T11:38:00Z",
+      "alert": "search-service p95 latency > 2000ms for 5m",
+      "symptoms": [
+        "p95 latency 5.2s (SLO 400ms)",
+        "ConnectionPoolTimeoutError in logs",
+        "Redis pool waiting queue > 20"
+      ],
+      "severity": "P2",
+      "status": "resolved",
+      "root_cause": "Redis connection pool exhausted after deploy v6.4.2 cut the pool from 60 to 40 while peak concurrency stayed around 69.",
+      "fixes_tried": [
+        {
+          "fix": "restart_service",
+          "outcome": "failed",
+          "note": "restarted the pods; the waiting queue rebuilt within 6 min"
+        },
+        {
+          "fix": "increase_pool_size",
+          "outcome": "failed",
+          "note": "raised the pool to 80; the shared Redis cluster hit maxclients=100 and evicted seven other tenants' clients, so the raise was reverted"
+        },
+        {
+          "fix": "rollback_deploy",
+          "outcome": "worked",
+          "note": "rolled back to v6.3.4; the pool returned to 60 connections and the evictions stopped. This service shares a Redis cluster and must not raise its pool"
+        }
+      ],
+      "resolution_minutes": 27,
+      "resolved_by": "alice",
+      "related_deploy_id": "DEP-0028",
+      "log_file": "data/logs/INC-032.log",
+      "metrics_file": "data/metrics/INC-032.json",
+      "tags": [
+        "redis_pool_exhaustion",
+        "search-service"
       ]
     }
   ]
