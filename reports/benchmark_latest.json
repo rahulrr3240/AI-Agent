@@ -1,7 +1,7 @@
 {
   "run_id": "20261108-032816-b7cc",
   "status": "complete",
-  "generated_at": "2026-11-08T09:41:04.298258+00:00",
+  "generated_at": "2026-11-08T10:12:16.531563+00:00",
   "incidents": 25,
   "incident_ids": [
     "INC-101",
@@ -33,13 +33,14 @@
   "conditions": [
     "A_off",
     "B_seeded",
+    "C_learning",
     "D_cold"
   ],
   "conditions_this_invocation": [
-    "D_cold"
+    "C_learning"
   ],
   "missing_rows": {},
-  "rows_already_recorded": 58,
+  "rows_already_recorded": 83,
   "retried_rows": 8,
   "remaining_llm_failed": 2,
   "hindsight_configured": true,
@@ -49,7 +50,7 @@
     "fallback": "openai/gpt-oss-20b"
   },
   "memory_backends": {
-    "D_cold": "hindsight"
+    "C_learning": "hindsight"
   },
   "memory_warnings": {},
   "method": {
@@ -59,7 +60,7 @@
     "no_fallback": true,
     "tokens_per_minute_budget": 6500,
     "minimum_pace_seconds": 2.0,
-    "seconds_spent_pacing": 691.0,
+    "seconds_spent_pacing": 591.4,
     "pacing_waits": 25,
     "prompt_log_chars": 3000
   },
@@ -98,6 +99,23 @@
       "avg_prompt_tokens": 2850.0,
       "all_rows_top1": 0.76
     },
+    "C_learning": {
+      "incidents": 25,
+      "llm_answered": 25,
+      "fallback_rows": 0,
+      "llm_failed_rows": 0,
+      "retried_rows": 0,
+      "headline_basis": "all rows were LLM-answered",
+      "top1_accuracy": 0.64,
+      "resolved_rate": 1.0,
+      "avg_attempts": 1.52,
+      "avg_simulated_minutes": 10.16,
+      "second_half_top1": 0.5385,
+      "novel_incidents": 2,
+      "novel_flag_accuracy": 1.0,
+      "avg_prompt_tokens": 2942.8,
+      "all_rows_top1": 0.64
+    },
     "D_cold": {
       "incidents": 25,
       "llm_answered": 23,
@@ -116,5 +134,5 @@
       "all_rows_top1": 0.64
     }
   },
-  "elapsed_seconds": 1491.5
+  "elapsed_seconds": 1618.2
 }
